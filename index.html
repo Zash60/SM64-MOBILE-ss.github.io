@@ -140,9 +140,43 @@
             } catch (error) { console.error(error); renderError("Could not load stars for this course."); return []; }
         }
         
-        async function showCoursesPage() { /* ... unchanged ... */ }
-        async function showStarsPage(courseId) { /* ... unchanged ... */ }
+        async function showCoursesPage() {
+            renderLoader("Loading Courses...");
+            const courses = await loadCourses();
+            if (courses.length === 0) {
+                renderError('No courses found. Please clear the DB and run `seedDatabase()` in the console (F12).');
+                return;
+            }
+            appContainer.innerHTML = `
+                <h2>Select a Course</h2>
+                <div class="grid-container">
+                    ${courses.map(course => `
+                        <div class="card" onclick="window.location.hash='#course/${course.id}'">
+                            <h3>${course.name}</h3>
+                        </div>
+                    `).join('')}
+                </div>`;
+        }
         
+        async function showStarsPage(courseId) {
+            renderLoader("Loading Stars...");
+            await loadCourses();
+            const course = appState.coursesCache.find(c => c.id === courseId);
+            if (!course) { window.location.hash = '#home'; return; }
+
+            const stars = await loadStarsForCourse(courseId);
+            appContainer.innerHTML = `
+                <div class="breadcrumb"><a href="#home">Courses</a> / <span>${course.name}</span></div>
+                <h2>Select a Star</h2>
+                <div class="grid-container">
+                    ${stars.map(star => `
+                        <div class="card" onclick="window.location.hash='#star/${course.id}/${star.id}'">
+                            <h3>${star.name}</h3>
+                        </div>
+                    `).join('')}
+                </div>`;
+        }
+
         async function showLeaderboard(courseId, starId) {
             renderLoader("Loading Leaderboard...");
             await loadCourses();
@@ -152,7 +186,6 @@
 
             if (!course || !star) { window.location.hash = '#home'; return; }
 
-            // *** BUG FIX: Order by the numeric time field ***
             const runsCollection = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs')
                 .where('status', '==', 'verified').orderBy('time_numeric');
 
@@ -191,7 +224,63 @@
             });
         }
         
-        async function showModQueuePage() { /* ... unchanged ... */ }
+        async function showModQueuePage() {
+            if (!appState.isModerator) {
+                window.location.hash = '#home';
+                return;
+            }
+            renderLoader("Loading Moderation Queue...");
+            await loadCourses();
+
+            try {
+                const pendingRunsSnapshot = await db.collectionGroup('runs').where('status', '==', 'pending').get();
+                const pendingRuns = pendingRunsSnapshot.docs.map(doc => {
+                    const path = doc.ref.path.split('/');
+                    return {
+                        id: doc.id,
+                        courseId: path[1],
+                        starId: path[3],
+                        ...doc.data()
+                    };
+                });
+
+                for (const run of pendingRuns) {
+                    await loadStarsForCourse(run.courseId);
+                }
+
+                appContainer.innerHTML = `
+                    <h2>Moderation Queue</h2>
+                    <div id="mod-queue-container" class="table-container">
+                        <table>
+                            <thead><tr><th>Runner</th><th>Course / Star</th><th>Time</th><th>Date</th><th>Video</th><th>Actions</th></tr></thead>
+                            <tbody>
+                                ${pendingRuns.map(run => {
+                                    const course = appState.coursesCache.find(c => c.id === run.courseId);
+                                    const star = appState.starsCache[run.courseId]?.find(s => s.id === run.starId);
+                                    const runDate = run.date ? new Date(run.date.replace(/-/g, '\/')).toLocaleDateString() : 'N/A';
+                                    return `
+                                        <tr>
+                                            <td>${run.runner}</td>
+                                            <td>${course?.name || '...'} / ${star?.name || '...'}</td>
+                                            <td>${run.time_str}</td>
+                                            <td>${runDate}</td>
+                                            <td><a href="${run.videoLink}" target="_blank">Link</a></td>
+                                            <td><div class="mod-actions">
+                                                <button onclick="updateRunStatus('${run.courseId}', '${run.starId}', '${run.id}', 'verified')" title="Verify">✅</button>
+                                                <button onclick="updateRunStatus('${run.courseId}', '${run.starId}', '${run.id}', 'rejected')" title="Reject">❌</button>
+                                                <button onclick="openEditModal('${run.courseId}', '${run.starId}', '${run.id}')" title="Edit">✏️</button>
+                                                <button onclick="deleteRun('${run.courseId}', '${run.starId}', '${run.id}')" title="Delete">🗑️</button>
+                                            </div></td>
+                                        </tr>`;
+                                }).join('') || '<tr><td colspan="6">The moderation queue is empty.</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>`;
+            } catch (error) {
+                console.error("Error loading mod queue:", error);
+                renderError("Failed to load moderation queue. You may need to create a Firestore index. Check the console (F12) for an error message with a link to create it.");
+            }
+        }
         
         async function showWorldRecordsPage() {
             renderLoader("Calculating World Records...");
@@ -199,20 +288,19 @@
                 await loadCourses();
                 const allRunsSnapshot = await db.collectionGroup('runs').where('status', '==', 'verified').get();
                 
-                const stars = {}; // Group runs by star
+                const stars = {};
                 allRunsSnapshot.forEach(doc => {
                     const run = doc.data();
                     const path = doc.ref.path.split('/');
-                    const key = `${path[1]}/${path[3]}`; // courseId/starId
+                    const key = `${path[1]}/${path[3]}`;
                     if (!stars[key]) stars[key] = { runs: [], courseId: path[1], starId: path[3] };
                     stars[key].runs.push(run);
                 });
 
-                const wrData = {}; // Tally WRs for each runner
+                const wrData = {};
                 for (const key in stars) {
                     const starInfo = stars[key];
                     if (starInfo.runs.length > 0) {
-                        // Sort runs for this star to find the #1
                         starInfo.runs.sort((a, b) => a.time_numeric - b.time_numeric);
                         const wrHolder = starInfo.runs[0].runner;
                         
@@ -256,14 +344,87 @@
         // ==============================================================================
         // --- 4. ACTIONS & MODERATION ---
         // ==============================================================================
-        function updateModeratorUI(isLoggedIn) { /* ... unchanged ... */ }
-        function loginModerator() { /* ... unchanged ... */ }
-        function logoutModerator() { /* ... unchanged ... */ }
-        function openModal(modalId) { /* ... unchanged ... */ }
-        function closeModal(modalId) { /* ... unchanged ... */ }
-        async function openSubmissionModal() { /* ... unchanged ... */ }
-        async function openEditModal(courseId, starId, runId) { /* ... unchanged ... */ }
+        function updateModeratorUI(isLoggedIn) {
+            appState.isModerator = isLoggedIn;
+            const modSection = document.getElementById('moderator-auth-section');
+            const modQueueLink = document.getElementById('mod-queue-link-container');
+
+            if (isLoggedIn) {
+                modSection.innerHTML = `<a class="action-button" onclick="logoutModerator()">Logout</a>`;
+                modQueueLink.innerHTML = `<a href="#modqueue">Moderation Queue</a>`;
+            } else {
+                modSection.innerHTML = `<a class="action-button" onclick="loginModerator()">Moderator Login</a>`;
+                modQueueLink.innerHTML = '';
+            }
+            router();
+        }
+
+        function loginModerator() {
+            const pass = prompt("Enter moderator password:");
+            if (pass === appState.password) {
+                alert("Login successful!");
+                updateModeratorUI(true);
+            } else if (pass) {
+                alert("Incorrect password.");
+            }
+        }
+
+        function logoutModerator() {
+            updateModeratorUI(false);
+        }
+
+        function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
+        function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
         
+        async function openSubmissionModal() {
+            const courses = await loadCourses();
+            const courseSelect = document.getElementById('course-select');
+            const starSelect = document.getElementById('star-select');
+            
+            courseSelect.innerHTML = '<option value="">-- Select a Course --</option>' + courses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            starSelect.innerHTML = '<option value="">-- Select a Course First --</option>';
+            starSelect.disabled = true;
+
+            courseSelect.onchange = async () => {
+                const courseId = courseSelect.value;
+                if (!courseId) {
+                    starSelect.innerHTML = '<option value="">-- Select a Course First --</option>';
+                    starSelect.disabled = true;
+                    return;
+                }
+                const stars = await loadStarsForCourse(courseId);
+                starSelect.innerHTML = '<option value="">-- Select a Star --</option>' + stars.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                starSelect.disabled = false;
+            };
+            
+            openModal('submission-modal');
+        }
+
+        async function openEditModal(courseId, starId, runId) {
+            if (!appState.isModerator) return;
+            try {
+                const runDoc = await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId).get();
+                if (!runDoc.exists) {
+                    alert("Run not found!");
+                    return;
+                }
+                const runData = runDoc.data();
+                
+                document.getElementById('edit-run-id').value = runId;
+                document.getElementById('edit-course-id').value = courseId;
+                document.getElementById('edit-star-id').value = starId;
+                document.getElementById('edit-runner').value = runData.runner;
+                document.getElementById('edit-time').value = runData.time_str;
+                document.getElementById('edit-date').value = runData.date;
+                document.getElementById('edit-videoLink').value = runData.videoLink;
+                
+                openModal('edit-run-modal');
+            } catch(error) {
+                console.error("Error opening edit modal:", error);
+                alert("Could not load run data for editing.");
+            }
+        }
+
         function parseTimeToNumeric(timeStr) {
             if (String(timeStr).includes(':')) {
                 const parts = String(timeStr).split(':').map(Number);
@@ -287,8 +448,8 @@
             
             const runData = {
                 runner: runnerName,
-                time_str: timeStr, // Display time
-                time_numeric: parseTimeToNumeric(timeStr), // Sorting time
+                time_str: timeStr,
+                time_numeric: parseTimeToNumeric(timeStr),
                 date: form.date.value,
                 videoLink: form.videoLink.value,
                 status: 'pending'
@@ -298,13 +459,17 @@
             
             try {
                 const existingRunSnapshot = await runsRef.where('runner', '==', runnerName).where('status', '==', 'verified').limit(1).get();
+
                 if (!existingRunSnapshot.empty) {
                     const existingTime = existingRunSnapshot.docs[0].data().time_numeric;
                     if (runData.time_numeric >= existingTime) {
                         alert("Submission failed: Your new time must be faster than your currently verified record.");
-                        return; // Stop execution
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Submit Run';
+                        return;
                     }
                 }
+                
                 await runsRef.add(runData);
                 alert("Run submitted for moderation!");
                 closeModal('submission-modal');
@@ -317,13 +482,71 @@
                 submitButton.textContent = 'Submit Run';
             }
         }
-        
+
         async function handleRunUpdate(event) {
             event.preventDefault();
-            // ... (code for updating a run)
+            if (!appState.isModerator) return;
+            const form = event.target;
+            const button = form.querySelector('button');
+            button.disabled = true;
+            button.textContent = 'Updating...';
+
+            const runId = form['edit-run-id'].value;
+            const courseId = form['edit-course-id'].value;
+            const starId = form['edit-star-id'].value;
+            const timeStr = form['edit-time'].value;
+            
+            const updatedData = {
+                runner: form['edit-runner'].value,
+                time_str: timeStr,
+                time_numeric: parseTimeToNumeric(timeStr),
+                date: form['edit-date'].value,
+                videoLink: form['edit-videoLink'].value
+            };
+
+            try {
+                await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId).update(updatedData);
+                alert("Run updated successfully!");
+                closeModal('edit-run-modal');
+                router();
+            } catch(error) {
+                console.error("Run update error:", error);
+                alert("Failed to update run.");
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Update Run';
+            }
         }
-        async function updateRunStatus(courseId, starId, runId, newStatus) { /* ... unchanged ... */ }
-        async function deleteRun(courseId, starId, runId) { /* ... unchanged ... */ }
+
+        async function updateRunStatus(courseId, starId, runId, newStatus) {
+            if (!appState.isModerator) return;
+            if (!confirm(`Are you sure you want to ${newStatus} this run?`)) return;
+
+            try {
+                await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId).update({
+                    status: newStatus
+                });
+                alert(`Run has been ${newStatus}.`);
+                router();
+            } catch (error) {
+                console.error(`Failed to ${newStatus} run:`, error);
+                alert(`An error occurred.`);
+            }
+        }
+
+        async function deleteRun(courseId, starId, runId) {
+            if (!appState.isModerator) return;
+            if (!confirm("Are you sure you want to permanently delete this run? This cannot be undone.")) return;
+
+            try {
+                await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId).delete();
+                alert("Run deleted successfully.");
+                router();
+            } catch (error) {
+                console.error("Failed to delete run:", error);
+                alert("An error occurred while deleting the run.");
+            }
+        }
         
         // ==============================================================================
         // --- 5. SEED FUNCTION (FOR DEV CONSOLE USE) ---
@@ -334,8 +557,270 @@
 
             const seedData = {
                 courses: [
-                    // All 17 courses with their stars and runs go here.
-                    // This is the full, correct data structure.
+                    { id: "bob", name: "Bob-omb Battlefield", order: 1, stars: [
+                        { id: "big_bob_omb_on_the_summit", name: "Big Bob-Omb on the Summit", order: 1, runs: [] },
+                        { id: "footrace_with_koopa_the_quick", name: "Footrace with Koopa the Quick", order: 2, runs: [] },
+                        { id: "shoot_to_the_island_in_the_sky", name: "Shoot to the Island in the Sky", order: 3, runs: [] },
+                        { id: "find_the_8_red_coins", name: "Find the 8 Red Coins", order: 4, runs: [] },
+                        { id: "mario_wings_to_the_sky", name: "Mario Wings to the Sky", order: 5, runs: [] },
+                        { id: "behind_chain_chomps_gate", name: "Behind Chain Chomp's Gate", order: 6, runs: [
+                            { runner: "Cappu", time: "12.50", date: "2024-08-14", videoLink: "https://youtu.be/xk1TlvjUSZA" },
+                            { runner: "Chillo", time: "13.73", date: "2024-08-11", videoLink: "https://www.youtube.com/watch?v=RXf4cT7enEw" }
+                        ]},
+                        { id: "bob_100_coins", name: "BoB 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "wf", name: "Whomp's Fortress", order: 2, stars: [
+                        { id: "chip_off_whomps_block", name: "Chip off Whomp's Block", order: 1, runs: [] },
+                        { id: "to_the_top_of_the_fortress", name: "To the Top of the Fortress", order: 2, runs: [] },
+                        { id: "shoot_into_the_wild_blue", name: "Shoot into the Wild Blue", order: 3, runs: [
+                            { runner: "stEv", time: "9.96", date: "2024-10-04", videoLink: "https://youtu.be/BAEcgp-oHm4" },
+                            { runner: "SpeedVortex", time: "10.36", date: "2024-08-18", videoLink: "https://youtu.be/evH4OeyX46k?si=y3vpS97z65A4q8ve" }
+                        ]},
+                        { id: "red_coins_on_the_floating_isle", name: "Red Coins on the Floating Isle", order: 4, runs: [] },
+                        { id: "fall_onto_the_caged_island", name: "Fall onto the Caged Island", order: 5, runs: [
+                            { runner: "stEv", time: "11.53", date: "2024-10-04", videoLink: "https://youtu.be/jVYhy01ph7c?si=zNI99DDmTFXKsdxT" },
+                            { runner: "Major", time: "11.76", date: "2024-08-11", videoLink: "https://youtu.be/hEQ_Gcmw_t0?si=A0FrpNb1LTWLwnrc" }
+                        ]},
+                        { id: "blast_away_the_wall", name: "Blast Away the Wall", order: 6, runs: [
+                            { runner: "Cabinet_Pie", time: "8.23", date: "2024-06-17", videoLink: "https://youtu.be/SXzn4LDffzs?si=FTRRNUmQ4XmZDXnP" },
+                            { runner: "Nisi Sm64", time: "8.43", date: "2021-05-15", videoLink: "https://youtu.be/lHx6lb3BkB8?si=F5PJNNV-H2ZCQyIp" },
+                            { runner: "Sebastian", time: "9.36", date: "2024-09-23", videoLink: "https://youtu.be/g2wSHC0_9Tg?si=Noq4O2JnWGc2ce0t" }
+                        ]},
+                        { id: "wf_100_coins", name: "WF 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "jrb", name: "Jolly Roger Bay", order: 3, stars: [
+                        { id: "plunder_in_the_sunken_ship", name: "Plunder in the Sunken Ship", order: 1, runs: [] },
+                        { id: "can_the_eel_come_out_to_play", name: "Can the Eel Come out to Play?", order: 2, runs: [] },
+                        { id: "treasure_of_the_ocean_cave", name: "Treasure of the Ocean Cave", order: 3, runs: [
+                            { runner: "SpeedVortex", time: "41.80", date: "2024-08-13", videoLink: "https://youtu.be/Q9wAIzBs2Nc?si=2PD_rFQmpnfoi1Yv" },
+                            { runner: "Cappu", time: "42.03", date: "2024-08-13", videoLink: "https://youtu.be/96WgYDRoPqc" },
+                            { runner: "Nisi Sm64", time: "48.33", date: "2021-03-04", videoLink: "https://www.youtube.com/watch?v=i4qKBOikuZQ&t=41s" }
+                        ]},
+                        { id: "red_coins_on_the_ship_afloat", name: "Red Coins on the Ship Afloat", order: 4, runs: [
+                            { runner: "Cappu", time: "1:01.13", date: "2024-11-08", videoLink: "https://youtu.be/1awEYs2_R-I?si=BGP0ccaj31xPkPWZ" }
+                        ]},
+                        { id: "blast_to_the_stone_pillar", name: "Blast to the Stone Pillar", order: 5, runs: [] },
+                        { id: "through_the_jet_stream", name: "Through the Jet Stream", order: 6, runs: [] },
+                        { id: "jrb_100_coins", name: "JRB 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "ccm", name: "Cool, Cool Mountain", order: 4, stars: [
+                        { id: "slip_slidin_away", name: "Slip Slidin' Away", order: 1, runs: [] },
+                        { id: "lil_penguin_lost", name: "Li'l Penguin Lost", order: 2, runs: [] },
+                        { id: "big_penguin_race", name: "Big Penguin Race", order: 3, runs: [] },
+                        { id: "frosty_slide_for_8_red_coins", name: "Frosty Slide for 8 Red Coins", order: 4, runs: [
+                            { runner: "Cappu", time: "41.66", date: "2024-08-13", videoLink: "https://youtu.be/29-rcvux468" },
+                            { runner: "Major", time: "43.23", date: "2024-07-27", videoLink: "https://youtube.com/shorts/8Jv5S1Mkl-8?si=lsxD9S7N9MZoP5es" },
+                            { runner: "Nisi sm64", time: "54.43", date: "2021-03-18", videoLink: "https://youtu.be/TaasQ943pwE" }
+                        ]},
+                        { id: "snowmans_lost_his_head", name: "Snowman's Lost his Head", order: 5, runs: [
+                            { runner: "SpeedVortex", time: "36.20", date: "2024-08-13", videoLink: "https://youtu.be/NK-pPVOscuE?si=WtCJAgc_hme5mjeU" }
+                        ]},
+                        { id: "wall_kicks_will_work", name: "Wall Kicks will Work", order: 6, runs: [
+                             { runner: "stEv", time: "8.90", date: "2024-10-03", videoLink: "https://youtu.be/8ZujZM-8cQE?si=efs0EXI35YWV8Kge" },
+                             { runner: "Cappu", time: "9.53", date: "2024-08-13", videoLink: "https://youtu.be/WRbN50hwMsA" },
+                             { runner: "Nisi Sm64", time: "9.83", date: "2021-02-16", videoLink: "https://youtu.be/4ayImJZkCJ4?si=EnDgjspAnHw7UYj2" }
+                        ]},
+                        { id: "ccm_100_coins", name: "CCM 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "bbh", name: "Big Boo's Haunt", order: 5, stars: [
+                        { id: "go_on_a_ghost_hunt", name: "Go on a Ghost Hunt", order: 1, runs: [] },
+                        { id: "ride_big_boos_merry_go_round", name: "Ride Big Boo's Merry-Go-Round", order: 2, runs: [] },
+                        { id: "secret_of_the_haunted_books", name: "Secret of the Haunted Books", order: 3, runs: [
+                            { runner: "stEv", time: "11.36", date: "2024-10-04", videoLink: "https://youtu.be/Hua2Qfz8r7s?si=DVD2ONnrmALlEnjq" },
+                            { runner: "Major", time: "11.53", date: "2024-08-13", videoLink: "https://youtu.be/UP53rC4vtog?si=Dh6AP3We-AMiFHth" },
+                            { runner: "Chillo", time: "16.66", date: "2024-08-12", videoLink: "https://youtu.be/IBg2m-tAaT8?si=f-Gb4t5nMwkboGcJ" }
+                        ]},
+                        { id: "seek_the_8_red_coins", name: "Seek the 8 Red Coins", order: 4, runs: [] },
+                        { id: "big_boos_balcony", name: "Big Boo's Balcony", order: 5, runs: [] },
+                        { id: "eye_to_eye_in_the_secret_room", name: "Eye to Eye in the Secret Room", order: 6, runs: [] },
+                        { id: "bbh_100_coins", name: "BBH 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "hmc", name: "Hazy Maze Cave", order: 6, stars: [
+                        { id: "swimming_beast_in_the_cavern", name: "Swimming Beast in the Cavern", order: 1, runs: [] },
+                        { id: "elevate_for_8_red_coins", name: "Elevate for 8 Red Coins", order: 2, runs: [] },
+                        { id: "metal_head_mario_can_move", name: "Metal-Head Mario Can Move!", order: 3, runs: [] },
+                        { id: "navigating_the_toxic_maze", name: "Navigating the Toxic Maze", order: 4, runs: [] },
+                        { id: "a_maze_ing_emergency_exit", name: "A-Maze-ing Emergency Exit", order: 5, runs: [] },
+                        { id: "watch_for_rolling_rocks", name: "Watch for Rolling Rocks", order: 6, runs: [] },
+                        { id: "hmc_100_coins", name: "HMC 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "lll", name: "Lethal Lava Land", order: 7, stars: [
+                        { id: "boil_the_big_bully", name: "Boil the Big Bully", order: 1, runs: [
+                            { runner: "SpeedVortex", time: "20.16", date: "2024-08-13", videoLink: "https://youtu.be/2MXzd8ZzXjA?si=P7sfp2QdGpGaQ_Ew" }
+                        ]},
+                        { id: "bully_the_bullies", name: "Bully the Bullies", order: 2, runs: [
+                            { runner: "SpeedVortex", time: "26.50", date: "2024-08-13", videoLink: "https://youtu.be/mtZTrsUbRns?si=2kJAx2RzhHEeou2R" }
+                        ]},
+                        { id: "8_coin_puzzle_with_15_pieces", name: "8-Coin Puzzle with 15 Pieces", order: 3, runs: [
+                            { runner: "stEv", time: "14.30", date: "2024-10-05", videoLink: "https://youtu.be/1lkjzmiZAfg?si=w_mfLDrA3J1ArZx3" },
+                            { runner: "Cappu", time: "14.76", date: "2024-08-12", videoLink: "https://youtu.be/ErXTRMAaFqk" },
+                            { runner: "Nisi Sm64", time: "14.80", date: "2024-08-11", videoLink: "https://youtu.be/7o4CzkXcmqs?si=oGV8w3oHY5OGkh8g" },
+                            { runner: "Major", time: "15.70", date: "2024-08-11", videoLink: "https://youtu.be/FM74-fMh46E?si=l7cgI0av9OIbPZW6" }
+                        ]},
+                        { id: "red_hot_log_rolling", name: "Red-Hot Log Rolling", order: 4, runs: [
+                            { runner: "Nisi sm64", time: "13.43", date: "2020-12-17", videoLink: "https://youtu.be/i1jXkfIe-Dk?si=H3oPW9K55ggtn-VF" }
+                        ]},
+                        { id: "hot_foot_it_into_the_volcano", name: "Hot-Foot-It into the Volcano", order: 5, runs: [] },
+                        { id: "elevator_tour_in_the_volcano", name: "Elevator Tour in the Volcano", order: 6, runs: [] },
+                        { id: "lll_100_coins", name: "LLL 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "ssl", name: "Shifting Sand Land", order: 8, stars: [
+                        { id: "in_the_talons_of_the_big_bird", name: "In the Talons of the Big Bird", order: 1, runs: [] },
+                        { id: "shining_atop_the_pyramid", name: "Shining Atop the Pyramid", order: 2, runs: [
+                            { runner: "SpeedVortex", time: "6.93", date: "2024-08-17", videoLink: "https://youtu.be/8z5p9iP2J28?si=GAQUeG7rm6p2oN5i" },
+                            { runner: "Cabinet_Pie", time: "6.96", date: "2024-04-07", videoLink: "https://youtu.be/ultWB5nUVaE?si=WA_4B3IK0wJLFN2A" },
+                            { runner: "Chillo", time: "6.96", date: "2024-08-11", videoLink: "https://youtu.be/-YyDmxaJR8o?si=Iiqj2RI2HjAY2pOJ" }
+                        ]},
+                        { id: "inside_the_ancient_pyramid", name: "Inside the Ancient Pyramid", order: 3, runs: [
+                            { runner: "Nisi Sm64", time: "15.03", date: "2022-06-10", videoLink: "https://youtu.be/g9fNot55y0c?si=lO5Gm0BKVH0vVd-b" },
+                            { runner: "Sebastian", time: "19.70", date: "2024-09-23", videoLink: "https://youtu.be/48sGOYYiDBM?si=cSRNuoQK9eGuw4af" }
+                        ]},
+                        { id: "stand_tall_on_the_four_pillars", name: "Stand Tall on the Four Pillars", order: 4, runs: [] },
+                        { id: "free_flying_for_8_red_coins", name: "Free Flying for 8 Red Coins", order: 5, runs: [] },
+                        { id: "pyramid_puzzle", name: "Pyramid Puzzle", order: 6, runs: [] },
+                        { id: "ssl_100_coins", name: "SSL 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "ddd", name: "Dire, Dire Docks", order: 9, stars: [
+                        { id: "board_bowsers_sub", name: "Board Bowser's Sub", order: 1, runs: [] },
+                        { id: "chests_in_the_current", name: "Chests in the Current", order: 2, runs: [] },
+                        { id: "pole_jumping_for_red_coins", name: "Pole-Jumping for Red Coins", order: 3, runs: [] },
+                        { id: "through_the_jet_stream_ddd", name: "Through the Jet Stream", order: 4, runs: [] },
+                        { id: "the_manta_rays_reward", name: "The Manta Ray's Reward", order: 5, runs: [] },
+                        { id: "collect_the_caps", name: "Collect the Caps", order: 6, runs: [] },
+                        { id: "ddd_100_coins", name: "DDD 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "sl", name: "Snowman's Land", order: 10, stars: [
+                        { id: "snowmans_big_head", name: "Snowman's Big Head", order: 1, runs: [] },
+                        { id: "chill_with_the_bully", name: "Chill with the Bully", order: 2, runs: [
+                            { runner: "Cabinet_Pie", time: "12.46", date: "2024-08-25", videoLink: "https://www.youtube.com/watch?v=hARdphGmL8I" },
+                            { runner: "Nisi sm64", time: "12.96", date: "2024-08-24", videoLink: "https://youtu.be/Ifbr_VPftQE?si=lifaTvmJL7IPioWQ" }
+                        ]},
+                        { id: "in_the_deep_freeze", name: "In the Deep Freeze", order: 3, runs: [
+                            { runner: "stEv", time: "5.56", date: "2024-10-03", videoLink: "https://youtu.be/uUqM3ERHiB0?si=Zgf6y3VefLJx6ZfN" },
+                            { runner: "SpeedVortex", time: "5.70", date: "2024-08-14", videoLink: "https://youtu.be/7fC7r_bY3J4?si=_MhOR535y7LhNJr4" },
+                            { runner: "Cappu", time: "5.86", date: "2024-08-11", videoLink: "https://youtu.be/rQTjPTqDucU?si=-tbmzqVe_GvXXofl" },
+                            { runner: "Chillo", time: "5.86", date: "2024-08-12", videoLink: "https://youtu.be/zLZbLtZUQ0w?si=-5hRP02la90bfbvU" },
+                            { runner: "Nisi Sm64", time: "5.93", date: "2024-08-11", videoLink: "https://youtu.be/xmDfiugpOXo?si=JVWpLx4I9FvVtWp9" }
+                        ]},
+                        { id: "whirl_from_the_freezing_pond", name: "Whirl from the Freezing Pond", order: 4, runs: [] },
+                        { id: "shell_shreddin_for_8_red_coins", name: "Shell Shreddin' for 8 Red Coins", order: 5, runs: [] },
+                        { id: "into_the_igloo", name: "Into the Igloo", order: 6, runs: [] },
+                        { id: "sl_100_coins", name: "SL 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "wdw", name: "Wet-Dry World", order: 11, stars: [
+                        { id: "shocking_arrow_lifts", name: "Shocking Arrow Lifts!", order: 1, runs: [
+                            { runner: "Speedvortex", time: "13.73", date: "2024-08-13", videoLink: "https://youtu.be/3GegUaMW6f4?si=1phX1J5ETgVPnDHG" }
+                        ]},
+                        { id: "top_o_the_town", name: "Top O' The Town", order: 2, runs: [
+                            { runner: "Chillo", time: "26.40", date: "2024-08-13", videoLink: "https://youtu.be/Pu0nGTuSz3g?si=Fjc1gKTh0QJTs8fj" }
+                        ]},
+                        { id: "secrets_in_the_shallows_and_sky", name: "Secrets in the Shallows & Sky", order: 3, runs: [] },
+                        { id: "express_elevators_hurry_up", name: "Express Elevators--Hurry Up!", order: 4, runs: [
+                             { runner: "SpeedVortex", time: "25.63", date: "2024-08-13", videoLink: "https://youtu.be/AcjU5HmZZFM?si=gzoL53U37f14n4Lt" }
+                        ]},
+                        { id: "go_to_town_for_red_coins", name: "Go to Town for Red Coins", order: 5, runs: [] },
+                        { id: "quick_race_through_downtown", name: "Quick Race through Downtown", order: 6, runs: [] },
+                        { id: "wdw_100_coins", name: "WDW 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "ttm", name: "Tall, Tall Mountain", order: 12, stars: [
+                        { id: "scale_the_mountain", name: "Scale the Mountain", order: 1, runs: [
+                            { runner: "SpeedVortex", time: "20.86", date: "2024-08-13", videoLink: "https://youtu.be/GaT8k467-q8?si=FSUZd58pItsZx73g" }
+                        ]},
+                        { id: "mystery_of_the_monkey_cage", name: "Mystery of the Monkey Cage", order: 2, runs: [] },
+                        { id: "scary_shrooms_red_coins", name: "Scary 'Shrooms, Red Coins", order: 3, runs: [] },
+                        { id: "mysterious_mountainside", name: "Mysterious Mountainside", order: 4, runs: [
+                            { runner: "SpeedVortex", time: "7.56", date: "2025-07-05", videoLink: "https://youtu.be/3OmPz3eEb14" }
+                        ]},
+                        { id: "breathtaking_view_from_bridge", name: "Breathtaking View from Bridge", order: 5, runs: [] },
+                        { id: "blast_to_the_lonely_mushroom", name: "Blast to the Lonely Mushroom", order: 6, runs: [
+                            { runner: "SpeedVortex", time: "11.23", date: "2024-08-13", videoLink: "https://youtu.be/nXnagxFRno0?si=d-tKNAsxzjA4WG5H" }
+                        ]},
+                        { id: "ttm_100_coins", name: "TTM 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "thi", name: "Tiny-Huge Island", order: 13, stars: [
+                        { id: "pluck_the_piranha_flower", name: "Pluck the Piranha Flower", order: 1, runs: [
+                             { runner: "SpeedVortex", time: "24.20", date: "2024-08-13", videoLink: "https://youtu.be/6fYTMUhKkis?si=9Bw6DGzmIFD7b1ii" }
+                        ]},
+                        { id: "the_tip_top_of_the_huge_island", name: "The Tip Top of the Huge Island", order: 2, runs: [
+                            { runner: "Cappu", time: "20.96", date: "2024-08-11", videoLink: "https://youtu.be/LVIQl0_CXuE?si=jyMpnzYafjY2KC50" }
+                        ]},
+                        { id: "rematch_with_koopa_the_quick", name: "Rematch with Koopa the Quick", order: 3, runs: [] },
+                        { id: "five_itty_bitty_secrets", name: "Five Itty Bitty Secrets", order: 4, runs: [] },
+                        { id: "wigglers_red_coins", name: "Wiggler's Red Coins", order: 5, runs: [] },
+                        { id: "make_wiggler_squirm", name: "Make Wiggler Squirm", order: 6, runs: [] },
+                        { id: "thi_100_coins", name: "THI 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "ttc", name: "Tick Tock Clock", order: 14, stars: [
+                        { id: "roll_into_the_cage", name: "Roll into the Cage", order: 1, runs: [] },
+                        { id: "the_pit_and_the_pendulums", name: "The Pit and the Pendulums", order: 2, runs: [] },
+                        { id: "get_a_hand", name: "Get a Hand", order: 3, runs: [
+                            { runner: "SpeedVortex", time: "8.96", date: "2024-08-13", videoLink: "https://youtu.be/JFZ29wYU--0?si=UP9gyjSu7FfBqnm2" }
+                        ]},
+                        { id: "stomp_on_the_thwomp", name: "Stomp on the Thwomp", order: 4, runs: [] },
+                        { id: "timed_jumps_on_moving_bars", name: "Timed Jumps on Moving Bars", order: 5, runs: [] },
+                        { id: "stop_time_for_red_coins", name: "Stop Time for Red Coins", order: 6, runs: [
+                            { runner: "Cappu", time: "14.30", date: "2024-08-11", videoLink: "https://youtu.be/yW2_-kILCHI?si=JXdqZNLgVu0qNSxQ" }
+                        ]},
+                        { id: "ttc_100_coins", name: "TTC 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "rr", name: "Rainbow Ride", order: 15, stars: [
+                        { id: "cruiser_crossing_the_rainbow", name: "Cruiser Crossing the Rainbow", order: 1, runs: [
+                            { runner: "Cappu", time: "21.16", date: "2024-08-11", videoLink: "https://youtu.be/9XkQGHd5Yok?si=ZHkKMKMbTCmEO3MY" },
+                            { runner: "Nisi Sm64", time: "23.76", date: "2024-08-11", videoLink: "https://youtu.be/nN6AcfpZQw4?si=d7cSnU4TsDpl2poQ" },
+                            { runner: "Chillo", time: "31.06", date: "2024-08-11", videoLink: "https://youtu.be/0GkFblHbXFo?si=edrk5CtRiBtdedrl" }
+                        ]},
+                        { id: "the_big_house_in_the_sky", name: "The Big House in the Sky", order: 2, runs: [
+                            { runner: "Cappu", time: "2:03.83", date: "2024-08-13", videoLink: "https://youtu.be/pmwHNLrPi8o" },
+                            { runner: "WRandY", time: "2:08.50", date: "2024-02-09", videoLink: "https://b23.tv/zmOucVf" },
+                            { runner: "Nisi Sm64", time: "2:10.20", date: "2021-03-04", videoLink: "https://youtu.be/pVmovfdrHCg?si=XfwLqa_HeXbi3Is5" }
+                        ]},
+                        { id: "coins_amassed_in_a_maze", name: "Coins Amassed in a Maze", order: 3, runs: [
+                            { runner: "stEv", time: "23.96", date: "2024-10-03", videoLink: "https://youtu.be/OCXyAUIZ3c0?si=c0hJkloq934wjW2N" },
+                            { runner: "Cappu", time: "25.60", date: "2024-08-11", videoLink: "https://youtu.be/uYsY55hiVqc?si=OErkBVq-BPUN1wmq" }
+                        ]},
+                        { id: "swingin_in_the_breeze", name: "Swingin' in the Breeze", order: 4, runs: [
+                            { runner: "Speedvortex", time: "13.86", date: "2024-08-13", videoLink: "https://youtu.be/ywRi4kdg3uE?si=LG6hJb7UJpVQtTzi" },
+                            { runner: "Chillo", time: "15.93", date: "2024-08-12", videoLink: "https://youtu.be/7F9zom6vsI4?si=6QL7zDvw8oT7rGAs" }
+                        ]},
+                        { id: "tricky_triangles", name: "Tricky Triangles!", order: 5, runs: [
+                            { runner: "stEv", time: "13.03", date: "2024-10-05", videoLink: "https://youtu.be/37P6VLXTX4w?si=VYpc7PMLzqynH9Tq" },
+                            { runner: "Chillo", time: "16.60", date: "2024-08-12", videoLink: "https://youtu.be/WG0XX-MO-Fg?si=GVF3e69PcsIvZHt3" }
+                        ]},
+                        { id: "somewhere_over_the_rainbow", name: "Somewhere over the Rainbow", order: 6, runs: [] },
+                        { id: "rr_100_coins", name: "RR 100 Coins", order: 7, runs: [] }
+                    ]},
+                    { id: "bowser_stages", name: "Bowser Stages", order: 16, stars: [
+                        { id: "bowser_in_the_dark_world_no_reds", name: "Bowser in the Dark World No Reds", order: 1, runs: [
+                            { runner: "stEv", time: "27.83", date: "2024-10-04", videoLink: "https://youtu.be/qQS6BGZgTQs?si=XVnJSraXvLiRm7le" }
+                        ]},
+                        { id: "bowser_in_the_dark_world_reds", name: "Bowser in the Dark World Reds", order: 2, runs: [
+                            { runner: "stEv", time: "47.33", date: "2024-10-03", videoLink: "https://youtu.be/_2Z4HtjkqV0?si=A27lvbqQHRbKy3iw" },
+                            { runner: "Mack64", time: "47.90", date: "2024-09-01", videoLink: "https://youtu.be/deiGDUoY1tI?si=CPbv_nYDqZ8CDo3Z" },
+                            { runner: "Cabinet_Pie", time: "50.30", date: "2024-07-16", videoLink: "https://youtu.be/kyfY6Rw8O_w?si=R1k7PLmaeOO2Ve8P" }
+                        ]},
+                        { id: "bowser_in_the_fire_sea_no_reds", name: "Bowser in the Fire Sea No Reds", order: 3, runs: [
+                             { runner: "stEv", time: "37.33", date: "2024-10-03", videoLink: "https://youtu.be/TinkZuCVE74?si=p677_9gl2aq_dbc0" }
+                        ]},
+                        { id: "bowser_in_the_fire_sea_reds", name: "Bowser in the Fire Sea Reds", order: 4, runs: [
+                            { runner: "stEv", time: "53.30", date: "2024-10-05", videoLink: "https://youtu.be/5IverqtAlPo?si=Rx-xOCmTiEos5IyT" },
+                            { runner: "Cappu", time: "1:09.03", date: "2024-08-11", videoLink: "https://youtu.be/NlMNUVJ6SS0?si=P3DTwNs4A5oScSZ7" }
+                        ]},
+                        { id: "bowser_in_the_sky_no_reds", name: "Bowser in the Sky No Reds", order: 5, runs: [
+                             { runner: "Sebastian", time: "48.70", date: "2024-09-21", videoLink: "https://youtu.be/CaUnnUjh3Ns?si=SevzYTW2VkZEZBVn" }
+                        ]},
+                        { id: "bowser_in_the_sky_reds", name: "Bowser in the Sky Reds", order: 6, runs: [
+                            { runner: "Cappu", time: "1:17.36", date: "2024-08-11", videoLink: "https://youtu.be/rOb_OTQeI6o?si=yl7_Cv6Tgb-cfHya" }
+                        ]}
+                    ]},
+                    { id: "secret_stars", name: "Castle Secret Stars", order: 17, stars: [
+                        { id: "the_princesss_secret_slide", name: "The Princess's Secret Slide", order: 1, runs: [] },
+                        { id: "the_princesss_secret_slide_u21", name: "The Princess's Secret Slide U21", order: 2, runs: [] },
+                        { id: "the_secret_aquarium", name: "The Secret Aquarium", order: 3, runs: [] },
+                        { id: "tower_of_the_wing_cap", name: "Tower of the Wing Cap", order: 4, runs: [] },
+                        { id: "cavern_of_the_metal_cap", name: "Cavern of the Metal Cap", order: 5, runs: [] },
+                        { id: "vanish_cap_under_the_moat", name: "Vanish Cap Under the Moat", order: 6, runs: [] },
+                        { id: "wing_mario_over_the_rainbow", name: "Wing Mario Over the Rainbow", order: 7, runs: [] }
+                    ]}
                 ]
             };
             
@@ -343,14 +828,13 @@
                 console.log("Starting database seed...");
                 const coursesCollection = db.collection('courses');
                 
-                // Programmatically add numeric time and status to all seed runs
                 seedData.courses.forEach(course => {
                     course.stars.forEach(star => {
                         star.runs.forEach(run => {
                             run.time_numeric = parseTimeToNumeric(run.time);
-                            run.time_str = run.time; // Keep original string for display
-                            delete run.time; // Remove old ambiguous field
-                            run.status = 'verified'; // All seed runs are pre-verified
+                            run.time_str = run.time;
+                            delete run.time;
+                            run.status = 'verified';
                         });
                     });
                 });
@@ -373,7 +857,7 @@
                 window.location.reload();
             } catch (error) {
                 console.error("SEEDING FAILED:", error);
-                alert("Seeding failed. Check the console for details.");
+                alert("Seeding failed. Check the console for details. Make sure the 'courses' collection was manually deleted from Firebase first.");
             }
         }
         
@@ -382,7 +866,6 @@
         // ==============================================================================
         window.addEventListener('hashchange', router);
         document.addEventListener('DOMContentLoaded', () => {
-            // Populate modal templates
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="submission-modal" class="modal">
                     <div class="modal-content">
