@@ -350,6 +350,9 @@
         // --- 5. SEED FUNCTION (FOR DEV CONSOLE USE) ---
         // ==============================================================================
         async function seedDatabase() {
+            console.log("Preparing to seed database. It's recommended to clear the 'courses' collection in Firebase Console first for a clean slate.");
+            if (!confirm("This will overwrite existing data. Are you sure you want to continue?")) return;
+
              const seedData = {
                 courses: [
                     { id: "bob", name: "Bob-omb Battlefield", order: 1, stars: [
@@ -620,30 +623,32 @@
             };
             
             console.log("Starting database seed...");
-            const batch = db.batch();
             const coursesCollection = db.collection('courses');
-            
-            const existingCourses = await coursesCollection.get();
-            for (const doc of existingCourses.docs) {
-                batch.delete(doc.ref);
+            const snapshot = await coursesCollection.get();
+            if(!snapshot.empty) {
+                console.log("Clearing existing data... This might take a moment.");
+                const deleteBatch = db.batch();
+                snapshot.docs.forEach(doc => {
+                    deleteBatch.delete(doc.ref);
+                });
+                await deleteBatch.commit();
+                 console.log("Existing data cleared.");
             }
-            await batch.commit(); // Commit deletions first
-            console.log("Old data cleared. Starting new seed.");
 
-            const newBatch = db.batch(); // Use a new batch for additions
+            const addBatch = db.batch();
             for (const course of seedData.courses) {
                 const courseRef = coursesCollection.doc(course.id);
-                newBatch.set(courseRef, { name: course.name, order: course.order });
+                addBatch.set(courseRef, { name: course.name, order: course.order });
                 for (const star of course.stars) {
                     const starRef = courseRef.collection('stars').doc(star.id);
-                    newBatch.set(starRef, { name: star.name, order: star.order });
+                    addBatch.set(starRef, { name: star.name, order: star.order });
                     for (const run of star.runs) {
                         const runRef = starRef.collection('runs').doc();
-                        newBatch.set(runRef, run);
+                        addBatch.set(runRef, run);
                     }
                 }
             }
-            await newBatch.commit();
+            await addBatch.commit();
             console.log("DATABASE SEEDING COMPLETE!");
             window.location.reload();
         }
