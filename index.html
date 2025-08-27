@@ -304,22 +304,29 @@
                     const starInfo = stars[key];
                     if (starInfo.runs.length > 0) {
                         starInfo.runs.sort((a, b) => a.time_numeric - b.time_numeric);
-                        const wrHolder = starInfo.runs[0].runner;
+                        const originalRunnerName = starInfo.runs[0].runner;
                         
+                        // *** BUG FIX: Normalize runner name to be case-insensitive ***
+                        const normalizedKey = originalRunnerName.toLowerCase().trim();
+
                         if (!appState.starsCache[starInfo.courseId]) {
                            await loadStarsForCourse(starInfo.courseId);
                         }
                         const starName = appState.starsCache[starInfo.courseId]?.find(s => s.id === starInfo.starId)?.name || starInfo.starId;
 
-                        if (!wrData[wrHolder]) {
-                            wrData[wrHolder] = { count: 0, stars: [] };
+                        if (!wrData[normalizedKey]) {
+                            wrData[normalizedKey] = {
+                                displayName: originalRunnerName, // Store first-seen capitalization
+                                count: 0,
+                                stars: []
+                            };
                         }
-                        wrData[wrHolder].count++;
-                        wrData[wrHolder].stars.push(starName);
+                        wrData[normalizedKey].count++;
+                        wrData[normalizedKey].stars.push(starName);
                     }
                 }
 
-                const sortedWRs = Object.entries(wrData).sort((a, b) => b[1].count - a[1].count);
+                const sortedWRs = Object.values(wrData).sort((a, b) => b.count - a.count);
 
                 appContainer.innerHTML = `
                     <h2>World Records Tally</h2>
@@ -327,10 +334,10 @@
                         <table>
                             <thead><tr><th>#</th><th>Runner</th><th>WRs</th><th>Stars</th></tr></thead>
                             <tbody>
-                                ${sortedWRs.map(([runner, data], index) => `
+                                ${sortedWRs.map((data, index) => `
                                     <tr>
                                         <td>${index + 1}</td>
-                                        <td>${runner}</td>
+                                        <td>${data.displayName}</td>
                                         <td>${data.count}</td>
                                         <td><ul class="wr-list">${data.stars.sort().map(s => `<li>${s}</li>`).join('')}</ul></td>
                                     </tr>
