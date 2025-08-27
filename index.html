@@ -144,7 +144,7 @@
             renderLoader("Loading Courses...");
             const courses = await loadCourses();
             if (courses.length === 0) {
-                renderError('No courses found. Please clear the DB and run `seedDatabase()` in the console (F12).');
+                renderError('No courses found. Please MANUALLY DELETE the `courses` collection in Firebase and run `seedDatabase()` in the console (F12).');
                 return;
             }
             appContainer.innerHTML = `
@@ -245,7 +245,9 @@
                 });
 
                 for (const run of pendingRuns) {
-                    await loadStarsForCourse(run.courseId);
+                    if (!appState.starsCache[run.courseId]) {
+                        await loadStarsForCourse(run.courseId);
+                    }
                 }
 
                 appContainer.innerHTML = `
@@ -261,7 +263,7 @@
                                     return `
                                         <tr>
                                             <td>${run.runner}</td>
-                                            <td>${course?.name || '...'} / ${star?.name || '...'}</td>
+                                            <td>${course?.name || run.courseId} / ${star?.name || run.starId}</td>
                                             <td>${run.time_str}</td>
                                             <td>${runDate}</td>
                                             <td><a href="${run.videoLink}" target="_blank">Link</a></td>
@@ -304,7 +306,9 @@
                         starInfo.runs.sort((a, b) => a.time_numeric - b.time_numeric);
                         const wrHolder = starInfo.runs[0].runner;
                         
-                        await loadStarsForCourse(starInfo.courseId);
+                        if (!appState.starsCache[starInfo.courseId]) {
+                           await loadStarsForCourse(starInfo.courseId);
+                        }
                         const starName = appState.starsCache[starInfo.courseId]?.find(s => s.id === starInfo.starId)?.name || starInfo.starId;
 
                         if (!wrData[wrHolder]) {
@@ -328,7 +332,7 @@
                                         <td>${index + 1}</td>
                                         <td>${runner}</td>
                                         <td>${data.count}</td>
-                                        <td><ul class="wr-list">${data.stars.map(s => `<li>${s}</li>`).join('')}</ul></td>
+                                        <td><ul class="wr-list">${data.stars.sort().map(s => `<li>${s}</li>`).join('')}</ul></td>
                                     </tr>
                                 `).join('') || '<tr><td colspan="4">No world records found.</td></tr>'}
                             </tbody>
@@ -337,7 +341,7 @@
                 `;
             } catch (error) {
                 console.error("Error calculating world records:", error);
-                renderError("Failed to calculate world records.");
+                renderError("Failed to calculate world records. You may need to create an index. Check the console (F12) for a link.");
             }
         }
         
@@ -552,7 +556,7 @@
         // --- 5. SEED FUNCTION (FOR DEV CONSOLE USE) ---
         // ==============================================================================
         async function seedDatabase() {
-            console.log("This will ERASE the 'courses' collection. Please ensure you have manually deleted the collection in Firebase Console first for a clean seed.");
+            console.log("This will POPULATE the 'courses' collection. It is critical that you MANUALLY delete the collection in the Firebase Console first for a clean seed.");
             if (!confirm("This will overwrite existing data. Are you sure you want to continue?")) return;
 
             const seedData = {
