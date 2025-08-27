@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SM64 Mobile Single Star Records</title>
     <style>
-        :root { --bg-color: #121212; --text-color: #e0e0e0; --primary-color: #ffffff; --secondary-color: #b3b3b3; --border-color: #333333; --pending-color: #f39c12; --accent-color: #6200ee; }
+        :root { --bg-color: #121212; --text-color: #e0e0e0; --primary-color: #ffffff; --secondary-color: #b3b3b3; --border-color: #333333; --pending-color: #f39c12; --accent-color: #6200ee; --rejected-color: #e74c3c; }
         body { background-color: var(--bg-color); color: var(--text-color); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; margin: 0; padding: 1rem; }
         header { text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem; }
         h1, h2, h3 { color: var(--primary-color); }
@@ -19,7 +19,7 @@
         .table-container { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border-color); }
-        .mod-actions { display: flex; gap: 5px; align-items: center; }
+        .mod-actions { display: flex; gap: 5px; align-items: center; white-space: nowrap; }
         .mod-actions button { background: none; border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 1rem; line-height: 1; }
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
         .modal-content { background-color: #2a2a2a; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; position: relative; max-height: 90vh; overflow-y: auto; }
@@ -32,6 +32,10 @@
         .breadcrumb { margin-bottom: 1rem; font-size: 1.1em; }
         .breadcrumb a { color: var(--secondary-color); }
         .breadcrumb span { color: var(--primary-color); }
+        .status-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.8em; font-weight: bold; color: #121212; }
+        .status-pending { background-color: var(--pending-color); }
+        .status-rejected { background-color: var(--rejected-color); }
+        #mod-queue-container td { vertical-align: middle; }
 
         @media (max-width: 600px) {
             body { padding: 0.5rem; }
@@ -47,6 +51,7 @@
         <h1>SM64 Mobile - Single Star Records</h1>
         <nav>
             <a href="#home">Courses</a>
+            <span id="mod-queue-link-container"></span>
         </nav>
         <div id="user-actions" style="margin-top: 1rem;">
             <a class="action-button" onclick="openSubmissionModal()">Submit Run</a>
@@ -56,27 +61,6 @@
     </header>
     <main id="app-container"></main>
 
-    <!-- Submission Modal -->
-    <div id="submission-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModal('submission-modal')">&times;</span>
-            <h2>Submit New Run</h2>
-            <form id="submission-form" onsubmit="handleRunSubmission(event)">
-                <label for="course-select">Course:</label>
-                <select id="course-select" required></select>
-                
-                <label for="star-select">Star:</label>
-                <select id="star-select" required disabled></select>
-
-                <label for="runner">Runner:</label><input type="text" id="runner" required>
-                <label for="time">Time (Seconds, e.g., 12.50 or MM:SS):</label><input type="text" id="time" required>
-                <label for="date">Date:</label><input type="date" id="date" required>
-                <label for="videoLink">Video Link:</label><input type="url" id="videoLink" required>
-                <button type="submit" id="submit-run-button">Submit Run</button>
-            </form>
-        </div>
-    </div>
-    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -92,7 +76,7 @@
             messagingSenderId: "474371344168",
             appId: "1:474371344168:web:a888b644a2a0b04ec9f21d"
         };
-        
+
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
@@ -123,11 +107,13 @@
             } else if (hash.startsWith('#star/')) {
                 const [courseId, starId] = hash.substring('#star/'.length).split('/');
                 showLeaderboard(courseId, starId);
+            } else if (hash === '#modqueue') {
+                showModQueuePage();
             } else {
                 window.location.hash = '#home';
             }
         }
-        
+
         // ==============================================================================
         // --- 3. RENDER FUNCTIONS ---
         // ==============================================================================
@@ -145,20 +131,20 @@
 
         async function loadStarsForCourse(courseId) {
             if (appState.starsCache[courseId]) return appState.starsCache[courseId];
-             try {
+            try {
                 const snapshot = await db.collection('courses').doc(courseId).collection('stars').orderBy('order').get();
                 const stars = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 appState.starsCache[courseId] = stars;
                 return stars;
             } catch (error) { console.error(error); renderError("Could not load stars for this course."); return []; }
         }
-        
+
         async function showCoursesPage() {
             renderLoader("Loading Courses...");
             const courses = await loadCourses();
             if (courses.length === 0) {
-                 renderError('No courses found. Open the console (F12) and run `seedDatabase()` to populate data.');
-                 return;
+                renderError('No courses found. Please clear the DB and run `seedDatabase()` in the console (F12).');
+                return;
             }
             appContainer.innerHTML = `
                 <h2>Select a Course</h2>
@@ -170,10 +156,11 @@
                     `).join('')}
                 </div>`;
         }
-        
+
         async function showStarsPage(courseId) {
             renderLoader("Loading Stars...");
-            const course = appState.coursesCache.find(c => c.id === courseId) || (await loadCourses()).find(c => c.id === courseId);
+            await loadCourses();
+            const course = appState.coursesCache.find(c => c.id === courseId);
             if (!course) { window.location.hash = '#home'; return; }
 
             const stars = await loadStarsForCourse(courseId);
@@ -191,13 +178,16 @@
 
         async function showLeaderboard(courseId, starId) {
             renderLoader("Loading Leaderboard...");
-            const course = appState.coursesCache.find(c => c.id === courseId) || (await loadCourses()).find(c => c.id === courseId);
-            const stars = appState.starsCache[courseId] || await loadStarsForCourse(courseId);
-            const star = stars.find(s => s.id === starId);
+            await loadCourses();
+            await loadStarsForCourse(courseId);
+            const course = appState.coursesCache.find(c => c.id === courseId);
+            const star = appState.starsCache[courseId]?.find(s => s.id === starId);
 
             if (!course || !star) { window.location.hash = '#home'; return; }
 
-            const runsCollection = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').orderBy('time');
+            const runsCollection = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs')
+                .where('status', '==', 'verified').orderBy('time');
+
             appState.currentListener = runsCollection.onSnapshot(snapshot => {
                 const runs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 appContainer.innerHTML = `
@@ -207,7 +197,7 @@
                     <h2>${star.name} Leaderboard</h2>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>#</th><th>Runner</th><th>Time</th><th>Date</th><th>Video</th></tr></thead>
+                            <thead><tr><th>#</th><th>Runner</th><th>Time</th><th>Date</th><th>Video</th>${appState.isModerator ? '<th>Actions</th>' : ''}</tr></thead>
                             <tbody>
                             ${runs.map((run, index) => {
                                 const runDate = run.date ? new Date(run.date.replace(/-/g, '\/')).toLocaleDateString() : 'N/A';
@@ -217,8 +207,13 @@
                                     <td>${run.time}</td>
                                     <td>${runDate}</td>
                                     <td><a href="${run.videoLink}" target="_blank" rel="noopener noreferrer">Link</a></td>
+                                    ${appState.isModerator ? `
+                                        <td><div class="mod-actions">
+                                            <button onclick="openEditModal('${courseId}', '${starId}', '${run.id}')" title="Edit">✏️</button>
+                                            <button onclick="deleteRun('${courseId}', '${starId}', '${run.id}')" title="Delete">🗑️</button>
+                                        </div></td>` : ''}
                                 </tr>`;
-                            }).join('') || '<tr><td colspan="5">No runs submitted yet.</td></tr>'}
+                            }).join('') || '<tr><td colspan="6">No verified runs submitted yet.</td></tr>'}
                             </tbody>
                         </table>
                     </div>`;
@@ -227,21 +222,83 @@
                 renderError("Failed to load leaderboard.");
             });
         }
-        
+
+        async function showModQueuePage() {
+            if (!appState.isModerator) {
+                window.location.hash = '#home';
+                return;
+            }
+            renderLoader("Loading Moderation Queue...");
+            await loadCourses();
+
+            try {
+                const pendingRunsSnapshot = await db.collectionGroup('runs').where('status', '==', 'pending').get();
+                const pendingRuns = pendingRunsSnapshot.docs.map(doc => {
+                    const path = doc.ref.path.split('/');
+                    return {
+                        id: doc.id,
+                        courseId: path[1],
+                        starId: path[3],
+                        ...doc.data()
+                    };
+                });
+
+                for (const run of pendingRuns) {
+                    await loadStarsForCourse(run.courseId);
+                }
+
+                appContainer.innerHTML = `
+                    <h2>Moderation Queue</h2>
+                    <div id="mod-queue-container" class="table-container">
+                        <table>
+                            <thead><tr><th>Runner</th><th>Course / Star</th><th>Time</th><th>Date</th><th>Video</th><th>Actions</th></tr></thead>
+                            <tbody>
+                                ${pendingRuns.map(run => {
+                                    const course = appState.coursesCache.find(c => c.id === run.courseId);
+                                    const star = appState.starsCache[run.courseId]?.find(s => s.id === run.starId);
+                                    const runDate = run.date ? new Date(run.date.replace(/-/g, '\/')).toLocaleDateString() : 'N/A';
+                                    return `
+                                        <tr>
+                                            <td>${run.runner}</td>
+                                            <td>${course?.name || '...'} / ${star?.name || '...'}</td>
+                                            <td>${run.time}</td>
+                                            <td>${runDate}</td>
+                                            <td><a href="${run.videoLink}" target="_blank">Link</a></td>
+                                            <td><div class="mod-actions">
+                                                <button onclick="updateRunStatus('${run.courseId}', '${run.starId}', '${run.id}', 'verified')" title="Verify">✅</button>
+                                                <button onclick="updateRunStatus('${run.courseId}', '${run.starId}', '${run.id}', 'rejected')" title="Reject">❌</button>
+                                                <button onclick="openEditModal('${run.courseId}', '${run.starId}', '${run.id}')" title="Edit">✏️</button>
+                                                <button onclick="deleteRun('${run.courseId}', '${run.starId}', '${run.id}')" title="Delete">🗑️</button>
+                                            </div></td>
+                                        </tr>`;
+                                }).join('') || '<tr><td colspan="6">The moderation queue is empty.</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>`;
+            } catch (error) {
+                console.error("Error loading mod queue:", error);
+                renderError("Failed to load moderation queue. You may need to create a Firestore index. Check the console (F12) for an error message with a link to create it.");
+            }
+        }
+
         // ==============================================================================
         // --- 4. ACTIONS & MODERATION ---
         // ==============================================================================
         function updateModeratorUI(isLoggedIn) {
             appState.isModerator = isLoggedIn;
             const modSection = document.getElementById('moderator-auth-section');
+            const modQueueLink = document.getElementById('mod-queue-link-container');
+
             if (isLoggedIn) {
                 modSection.innerHTML = `<a class="action-button" onclick="logoutModerator()">Logout</a>`;
+                modQueueLink.innerHTML = `<a href="#modqueue">Moderation Queue</a>`;
             } else {
                 modSection.innerHTML = `<a class="action-button" onclick="loginModerator()">Moderator Login</a>`;
+                modQueueLink.innerHTML = '';
             }
             router();
         }
-        
+
         function loginModerator() {
             const pass = prompt("Enter moderator password:");
             if (pass === appState.password) {
@@ -258,7 +315,7 @@
 
         function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
         function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
-        
+
         async function openSubmissionModal() {
             const courses = await loadCourses();
             const courseSelect = document.getElementById('course-select');
@@ -279,10 +336,35 @@
                 starSelect.innerHTML = '<option value="">-- Select a Star --</option>' + stars.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
                 starSelect.disabled = false;
             };
-
+            
             openModal('submission-modal');
         }
-        
+
+        async function openEditModal(courseId, starId, runId) {
+            if (!appState.isModerator) return;
+            try {
+                const runDoc = await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId).get();
+                if (!runDoc.exists) {
+                    alert("Run not found!");
+                    return;
+                }
+                const runData = runDoc.data();
+                
+                document.getElementById('edit-run-id').value = runId;
+                document.getElementById('edit-course-id').value = courseId;
+                document.getElementById('edit-star-id').value = starId;
+                document.getElementById('edit-runner').value = runData.runner;
+                document.getElementById('edit-time').value = runData.time;
+                document.getElementById('edit-date').value = runData.date;
+                document.getElementById('edit-videoLink').value = runData.videoLink;
+                
+                openModal('edit-run-modal');
+            } catch(error) {
+                console.error("Error opening edit modal:", error);
+                alert("Could not load run data for editing.");
+            }
+        }
+
         function parseTimeToSeconds(timeStr) {
             if (String(timeStr).includes(':')) {
                 const parts = String(timeStr).split(':').map(Number);
@@ -294,7 +376,7 @@
 
         async function handleRunSubmission(event) {
             event.preventDefault();
-            const form = event.target;
+            const form = document.getElementById('submission-form');
             const submitButton = document.getElementById('submit-run-button');
             submitButton.disabled = true;
             submitButton.textContent = 'Submitting...';
@@ -310,50 +392,108 @@
                 time: newTime,
                 date: form.date.value,
                 videoLink: form.videoLink.value,
+                status: 'pending'
             };
 
             const runsRef = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs');
             
             try {
-                const existingRunSnapshot = await runsRef.where('runner', '==', runnerName).limit(1).get();
+                const existingRunSnapshot = await runsRef.where('runner', '==', runnerName).where('status', '==', 'verified').limit(1).get();
 
                 if (!existingRunSnapshot.empty) {
-                    const existingRunDoc = existingRunSnapshot.docs[0];
-                    const existingTimeInSeconds = parseTimeToSeconds(existingRunDoc.data().time);
-
-                    if (newTimeInSeconds < existingTimeInSeconds) {
-                        await existingRunDoc.ref.update(runData);
-                        alert("Run updated successfully with a faster time!");
-                    } else {
-                        alert("Submission failed: Your new time is not faster than your existing record.");
+                    const existingTimeInSeconds = parseTimeToSeconds(existingRunSnapshot.docs[0].data().time);
+                    if (newTimeInSeconds >= existingTimeInSeconds) {
+                        alert("Submission failed: Your new time must be faster than your currently verified record.");
                         submitButton.disabled = false;
                         submitButton.textContent = 'Submit Run';
                         return;
                     }
-                } else {
-                    await runsRef.add(runData);
-                    alert("Run submitted successfully!");
                 }
                 
+                await runsRef.add(runData);
+                alert("Run submitted for moderation!");
                 closeModal('submission-modal');
                 form.reset();
             } catch (error) {
-                alert("An error occurred.");
+                alert("An error occurred during submission.");
                 console.error("Run submission error:", error);
             } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Submit Run';
             }
         }
-        
+
+        async function handleRunUpdate(event) {
+            event.preventDefault();
+            if (!appState.isModerator) return;
+            const form = event.target;
+            const button = form.querySelector('button');
+            button.disabled = true;
+            button.textContent = 'Updating...';
+
+            const runId = form['edit-run-id'].value;
+            const courseId = form['edit-course-id'].value;
+            const starId = form['edit-star-id'].value;
+            
+            const updatedData = {
+                runner: form['edit-runner'].value,
+                time: form['edit-time'].value,
+                date: form['edit-date'].value,
+                videoLink: form['edit-videoLink'].value
+            };
+
+            try {
+                await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId).update(updatedData);
+                alert("Run updated successfully!");
+                closeModal('edit-run-modal');
+                router(); // Refresh view
+            } catch(error) {
+                console.error("Run update error:", error);
+                alert("Failed to update run.");
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Update Run';
+            }
+        }
+
+        async function updateRunStatus(courseId, starId, runId, newStatus) {
+            if (!appState.isModerator) return;
+            if (!confirm(`Are you sure you want to ${newStatus} this run?`)) return;
+
+            try {
+                await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId).update({
+                    status: newStatus
+                });
+                alert(`Run has been ${newStatus}.`);
+                router();
+            } catch (error) {
+                console.error(`Failed to ${newStatus} run:`, error);
+                alert(`An error occurred.`);
+            }
+        }
+
+        async function deleteRun(courseId, starId, runId) {
+            if (!appState.isModerator) return;
+            if (!confirm("Are you sure you want to permanently delete this run? This cannot be undone.")) return;
+
+            try {
+                await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId).delete();
+                alert("Run deleted successfully.");
+                router();
+            } catch (error) {
+                console.error("Failed to delete run:", error);
+                alert("An error occurred while deleting the run.");
+            }
+        }
+
         // ==============================================================================
         // --- 5. SEED FUNCTION (FOR DEV CONSOLE USE) ---
         // ==============================================================================
         async function seedDatabase() {
-            console.log("Preparing to seed database. It's recommended to clear the 'courses' collection in Firebase Console first for a clean slate.");
+            console.log("This will ERASE the 'courses' collection. Please ensure you have manually deleted the collection in Firebase Console first for a clean seed.");
             if (!confirm("This will overwrite existing data. Are you sure you want to continue?")) return;
 
-             const seedData = {
+            const seedData = {
                 courses: [
                     { id: "bob", name: "Bob-omb Battlefield", order: 1, stars: [
                         { id: "big_bob_omb_on_the_summit", name: "Big Bob-Omb on the Summit", order: 1, runs: [] },
@@ -622,35 +762,31 @@
                 ]
             };
             
-            console.log("Starting database seed...");
-            const coursesCollection = db.collection('courses');
-            const snapshot = await coursesCollection.get();
-            if(!snapshot.empty) {
-                console.log("Clearing existing data... This might take a moment.");
-                const deleteBatch = db.batch();
-                snapshot.docs.forEach(doc => {
-                    deleteBatch.delete(doc.ref);
-                });
-                await deleteBatch.commit();
-                 console.log("Existing data cleared.");
-            }
-
-            const addBatch = db.batch();
-            for (const course of seedData.courses) {
-                const courseRef = coursesCollection.doc(course.id);
-                addBatch.set(courseRef, { name: course.name, order: course.order });
-                for (const star of course.stars) {
-                    const starRef = courseRef.collection('stars').doc(star.id);
-                    addBatch.set(starRef, { name: star.name, order: star.order });
-                    for (const run of star.runs) {
-                        const runRef = starRef.collection('runs').doc();
-                        addBatch.set(runRef, run);
+            try {
+                console.log("Starting database seed...");
+                const coursesCollection = db.collection('courses');
+                
+                const addBatch = db.batch();
+                for (const course of seedData.courses) {
+                    const courseRef = coursesCollection.doc(course.id);
+                    addBatch.set(courseRef, { name: course.name, order: course.order });
+                    for (const star of course.stars) {
+                        const starRef = courseRef.collection('stars').doc(star.id);
+                        star.runs.forEach(run => { run.status = 'verified'; }); // All seed runs are pre-verified
+                        addBatch.set(starRef, { name: star.name, order: star.order });
+                        for (const run of star.runs) {
+                            const runRef = starRef.collection('runs').doc();
+                            addBatch.set(runRef, run);
+                        }
                     }
                 }
+                await addBatch.commit();
+                console.log("DATABASE SEEDING COMPLETE!");
+                window.location.reload();
+            } catch (error) {
+                console.error("SEEDING FAILED:", error);
+                alert("Seeding failed. Check the console for details. You might need to delete the 'courses' collection from the Firebase Console manually first.");
             }
-            await addBatch.commit();
-            console.log("DATABASE SEEDING COMPLETE!");
-            window.location.reload();
         }
         
         // ==============================================================================
@@ -658,10 +794,41 @@
         // ==============================================================================
         window.addEventListener('hashchange', router);
         document.addEventListener('DOMContentLoaded', () => {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="submission-modal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-btn" onclick="closeModal('submission-modal')">&times;</span>
+                        <h2>Submit New Run</h2>
+                        <form id="submission-form" onsubmit="handleRunSubmission(event)">
+                            <label for="course-select">Course:</label><select id="course-select" required></select>
+                            <label for="star-select">Star:</label><select id="star-select" required disabled></select>
+                            <label for="runner">Runner:</label><input type="text" id="runner" required>
+                            <label for="time">Time (Seconds, e.g., 12.50 or MM:SS):</label><input type="text" id="time" required>
+                            <label for="date">Date:</label><input type="date" id="date" required>
+                            <label for="videoLink">Video Link:</label><input type="url" id="videoLink" required>
+                            <button type="submit" id="submit-run-button">Submit Run</button>
+                        </form>
+                    </div>
+                </div>
+                <div id="edit-run-modal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-btn" onclick="closeModal('edit-run-modal')">&times;</span>
+                        <h2>Edit Run</h2>
+                        <form id="edit-run-form" onsubmit="handleRunUpdate(event)">
+                            <input type="hidden" id="edit-run-id"><input type="hidden" id="edit-course-id"><input type="hidden" id="edit-star-id">
+                            <label for="edit-runner">Runner:</label><input type="text" id="edit-runner" required>
+                            <label for="edit-time">Time:</label><input type="text" id="edit-time" required>
+                            <label for="edit-date">Date:</label><input type="date" id="edit-date" required>
+                            <label for="edit-videoLink">Video Link:</label><input type="url" id="edit-videoLink" required>
+                            <button type="submit" id="update-run-button">Update Run</button>
+                        </form>
+                    </div>
+                </div>
+            `);
+
             updateModeratorUI(false);
             router();
         });
-
     </script>
 </body>
 </html>
