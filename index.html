@@ -34,6 +34,7 @@
         .breadcrumb span { color: var(--primary-color); }
         #mod-queue-container td { vertical-align: middle; }
         .wr-list { font-size: 0.9em; color: var(--secondary-color); list-style-type: none; padding-left: 0; }
+        .error-message { color: var(--rejected-color); margin-top: 1rem; display: none; }
 
         @media (max-width: 600px) {
             body { padding: 0.5rem; }
@@ -62,10 +63,9 @@
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
     <script>
-        // ... (todo o JavaScript vai aqui)
-        
         // ==============================================================================
         // --- 1. CONFIG & APP STATE ---
         // ==============================================================================
@@ -80,6 +80,7 @@
         
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const auth = firebase.auth();
 
         const appContainer = document.getElementById('app-container');
         const appState = {
@@ -87,7 +88,6 @@
             coursesCache: [],
             starsCache: {},
             currentListener: null,
-            password: "sm64"
         };
 
         // ==============================================================================
@@ -356,37 +356,50 @@
         // ==============================================================================
         // --- 4. ACTIONS & MODERATION ---
         // ==============================================================================
-        function updateModeratorUI(isLoggedIn) {
-            appState.isModerator = isLoggedIn;
+        function updateModeratorUI(user) {
+            appState.isModerator = !!user;
             const modSection = document.getElementById('moderator-auth-section');
             const modQueueLink = document.getElementById('mod-queue-link-container');
 
-            if (isLoggedIn) {
-                modSection.innerHTML = `<a class="action-button" onclick="logoutModerator()">Logout</a>`;
+            if (user) {
+                modSection.innerHTML = `<a class="action-button" onclick="logoutModerator()">Logout (${user.email})</a>`;
                 modQueueLink.innerHTML = `<a href="#modqueue">Moderation Queue</a>`;
             } else {
-                modSection.innerHTML = `<a class="action-button" onclick="loginModerator()">Moderator Login</a>`;
+                modSection.innerHTML = `<a class="action-button" onclick="openLoginModal()">Moderator Login</a>`;
                 modQueueLink.innerHTML = '';
             }
             router();
         }
 
-        function loginModerator() {
-            const pass = prompt("Enter moderator password:");
-            if (pass === appState.password) {
-                alert("Login successful!");
-                updateModeratorUI(true);
-            } else if (pass) {
-                alert("Incorrect password.");
+        auth.onAuthStateChanged(user => {
+            updateModeratorUI(user);
+        });
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const form = event.target;
+            const email = form.email.value;
+            const password = form.password.value;
+            const errorElement = document.getElementById('login-error');
+            errorElement.style.display = 'none';
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                closeModal('login-modal');
+            } catch (error) {
+                console.error("Login failed:", error.message);
+                errorElement.textContent = "Login failed. Please check your email and password.";
+                errorElement.style.display = 'block';
             }
         }
-
-        function logoutModerator() {
-            updateModeratorUI(false);
+        
+        async function logoutModerator() {
+            await auth.signOut();
         }
 
         function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
         function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+        function openLoginModal() { openModal('login-modal'); }
         
         async function openSubmissionModal() {
             const courses = await loadCourses();
@@ -560,7 +573,7 @@
                     batch.update(runRef, { status: 'verified' });
                     await batch.commit();
 
-                } else { // For 'rejected' or other statuses
+                } else {
                     await runRef.update({ status: newStatus });
                 }
 
@@ -601,42 +614,23 @@
                         { id: "shoot_to_the_island_in_the_sky", name: "Shoot to the Island in the Sky", order: 3, runs: [] },
                         { id: "find_the_8_red_coins", name: "Find the 8 Red Coins", order: 4, runs: [] },
                         { id: "mario_wings_to_the_sky", name: "Mario Wings to the Sky", order: 5, runs: [] },
-                        { id: "behind_chain_chomps_gate", name: "Behind Chain Chomp's Gate", order: 6, runs: [
-                            { runner: "Cappu", time: "12.50", date: "2024-08-14", videoLink: "https://youtu.be/xk1TlvjUSZA" },
-                            { runner: "Chillo", time: "13.73", date: "2024-08-11", videoLink: "https://www.youtube.com/watch?v=RXf4cT7enEw" }
-                        ]},
+                        { id: "behind_chain_chomps_gate", name: "Behind Chain Chomp's Gate", order: 6, runs: []},
                         { id: "bob_100_coins", name: "BoB 100 Coins", order: 7, runs: [] }
                     ]},
                     { id: "wf", name: "Whomp's Fortress", order: 2, stars: [
                         { id: "chip_off_whomps_block", name: "Chip off Whomp's Block", order: 1, runs: [] },
                         { id: "to_the_top_of_the_fortress", name: "To the Top of the Fortress", order: 2, runs: [] },
-                        { id: "shoot_into_the_wild_blue", name: "Shoot into the Wild Blue", order: 3, runs: [
-                            { runner: "stEv", time: "9.96", date: "2024-10-04", videoLink: "https://youtu.be/BAEcgp-oHm4" },
-                            { runner: "SpeedVortex", time: "10.36", date: "2024-08-18", videoLink: "https://youtu.be/evH4OeyX46k?si=y3vpS97z65A4q8ve" }
-                        ]},
+                        { id: "shoot_into_the_wild_blue", name: "Shoot into the Wild Blue", order: 3, runs: []},
                         { id: "red_coins_on_the_floating_isle", name: "Red Coins on the Floating Isle", order: 4, runs: [] },
-                        { id: "fall_onto_the_caged_island", name: "Fall onto the Caged Island", order: 5, runs: [
-                            { runner: "stEv", time: "11.53", date: "2024-10-04", videoLink: "https://youtu.be/jVYhy01ph7c?si=zNI99DDmTFXKsdxT" },
-                            { runner: "Major", time: "11.76", date: "2024-08-11", videoLink: "https://youtu.be/hEQ_Gcmw_t0?si=A0FrpNb1LTWLwnrc" }
-                        ]},
-                        { id: "blast_away_the_wall", name: "Blast Away the Wall", order: 6, runs: [
-                            { runner: "Cabinet_Pie", time: "8.23", date: "2024-06-17", videoLink: "https://youtu.be/SXzn4LDffzs?si=FTRRNUmQ4XmZDXnP" },
-                            { runner: "Nisi Sm64", time: "8.43", date: "2021-05-15", videoLink: "https://youtu.be/lHx6lb3BkB8?si=F5PJNNV-H2ZCQyIp" },
-                            { runner: "Sebastian", time: "9.36", date: "2024-09-23", videoLink: "https://youtu.be/g2wSHC0_9Tg?si=Noq4O2JnWGc2ce0t" }
-                        ]},
+                        { id: "fall_onto_the_caged_island", name: "Fall onto the Caged Island", order: 5, runs: []},
+                        { id: "blast_away_the_wall", name: "Blast Away the Wall", order: 6, runs: []},
                         { id: "wf_100_coins", name: "WF 100 Coins", order: 7, runs: [] }
                     ]},
                     { id: "jrb", name: "Jolly Roger Bay", order: 3, stars: [
                         { id: "plunder_in_the_sunken_ship", name: "Plunder in the Sunken Ship", order: 1, runs: [] },
                         { id: "can_the_eel_come_out_to_play", name: "Can the Eel Come out to Play?", order: 2, runs: [] },
-                        { id: "treasure_of_the_ocean_cave", name: "Treasure of the Ocean Cave", order: 3, runs: [
-                            { runner: "SpeedVortex", time: "41.80", date: "2024-08-13", videoLink: "https://youtu.be/Q9wAIzBs2Nc?si=2PD_rFQmpnfoi1Yv" },
-                            { runner: "Cappu", time: "42.03", date: "2024-08-13", videoLink: "https://youtu.be/96WgYDRoPqc" },
-                            { runner: "Nisi Sm64", time: "48.33", date: "2021-03-04", videoLink: "https://www.youtube.com/watch?v=i4qKBOikuZQ&t=41s" }
-                        ]},
-                        { id: "red_coins_on_the_ship_afloat", name: "Red Coins on the Ship Afloat", order: 4, runs: [
-                            { runner: "Cappu", time: "1:01.13", date: "2024-11-08", videoLink: "https://youtu.be/1awEYs2_R-I?si=BGP0ccaj31xPkPWZ" }
-                        ]},
+                        { id: "treasure_of_the_ocean_cave", name: "Treasure of the Ocean Cave", order: 3, runs: []},
+                        { id: "red_coins_on_the_ship_afloat", name: "Red Coins on the Ship Afloat", order: 4, runs: []},
                         { id: "blast_to_the_stone_pillar", name: "Blast to the Stone Pillar", order: 5, runs: [] },
                         { id: "through_the_jet_stream", name: "Through the Jet Stream", order: 6, runs: [] },
                         { id: "jrb_100_coins", name: "JRB 100 Coins", order: 7, runs: [] }
@@ -645,29 +639,15 @@
                         { id: "slip_slidin_away", name: "Slip Slidin' Away", order: 1, runs: [] },
                         { id: "lil_penguin_lost", name: "Li'l Penguin Lost", order: 2, runs: [] },
                         { id: "big_penguin_race", name: "Big Penguin Race", order: 3, runs: [] },
-                        { id: "frosty_slide_for_8_red_coins", name: "Frosty Slide for 8 Red Coins", order: 4, runs: [
-                            { runner: "Cappu", time: "41.66", date: "2024-08-13", videoLink: "https://youtu.be/29-rcvux468" },
-                            { runner: "Major", time: "43.23", date: "2024-07-27", videoLink: "https://youtube.com/shorts/8Jv5S1Mkl-8?si=lsxD9S7N9MZoP5es" },
-                            { runner: "Nisi sm64", time: "54.43", date: "2021-03-18", videoLink: "https://youtu.be/TaasQ943pwE" }
-                        ]},
-                        { id: "snowmans_lost_his_head", name: "Snowman's Lost his Head", order: 5, runs: [
-                            { runner: "SpeedVortex", time: "36.20", date: "2024-08-13", videoLink: "https://youtu.be/NK-pPVOscuE?si=WtCJAgc_hme5mjeU" }
-                        ]},
-                        { id: "wall_kicks_will_work", name: "Wall Kicks will Work", order: 6, runs: [
-                             { runner: "stEv", time: "8.90", date: "2024-10-03", videoLink: "https://youtu.be/8ZujZM-8cQE?si=efs0EXI35YWV8Kge" },
-                             { runner: "Cappu", time: "9.53", date: "2024-08-13", videoLink: "https://youtu.be/WRbN50hwMsA" },
-                             { runner: "Nisi Sm64", time: "9.83", date: "2021-02-16", videoLink: "https://youtu.be/4ayImJZkCJ4?si=EnDgjspAnHw7UYj2" }
-                        ]},
+                        { id: "frosty_slide_for_8_red_coins", name: "Frosty Slide for 8 Red Coins", order: 4, runs: []},
+                        { id: "snowmans_lost_his_head", name: "Snowman's Lost his Head", order: 5, runs: []},
+                        { id: "wall_kicks_will_work", name: "Wall Kicks will Work", order: 6, runs: []},
                         { id: "ccm_100_coins", name: "CCM 100 Coins", order: 7, runs: [] }
                     ]},
                     { id: "bbh", name: "Big Boo's Haunt", order: 5, stars: [
                         { id: "go_on_a_ghost_hunt", name: "Go on a Ghost Hunt", order: 1, runs: [] },
                         { id: "ride_big_boos_merry_go_round", name: "Ride Big Boo's Merry-Go-Round", order: 2, runs: [] },
-                        { id: "secret_of_the_haunted_books", name: "Secret of the Haunted Books", order: 3, runs: [
-                            { runner: "stEv", time: "11.36", date: "2024-10-04", videoLink: "https://youtu.be/Hua2Qfz8r7s?si=DVD2ONnrmALlEnjq" },
-                            { runner: "Major", time: "11.53", date: "2024-08-13", videoLink: "https://youtu.be/UP53rC4vtog?si=Dh6AP3We-AMiFHth" },
-                            { runner: "Chillo", time: "16.66", date: "2024-08-12", videoLink: "https://youtu.be/IBg2m-tAaT8?si=f-Gb4t5nMwkboGcJ" }
-                        ]},
+                        { id: "secret_of_the_haunted_books", name: "Secret of the Haunted Books", order: 3, runs: []},
                         { id: "seek_the_8_red_coins", name: "Seek the 8 Red Coins", order: 4, runs: [] },
                         { id: "big_boos_balcony", name: "Big Boo's Balcony", order: 5, runs: [] },
                         { id: "eye_to_eye_in_the_secret_room", name: "Eye to Eye in the Secret Room", order: 6, runs: [] },
@@ -683,36 +663,18 @@
                         { id: "hmc_100_coins", name: "HMC 100 Coins", order: 7, runs: [] }
                     ]},
                     { id: "lll", name: "Lethal Lava Land", order: 7, stars: [
-                        { id: "boil_the_big_bully", name: "Boil the Big Bully", order: 1, runs: [
-                            { runner: "SpeedVortex", time: "20.16", date: "2024-08-13", videoLink: "https://youtu.be/2MXzd8ZzXjA?si=P7sfp2QdGpGaQ_Ew" }
-                        ]},
-                        { id: "bully_the_bullies", name: "Bully the Bullies", order: 2, runs: [
-                            { runner: "SpeedVortex", time: "26.50", date: "2024-08-13", videoLink: "https://youtu.be/mtZTrsUbRns?si=2kJAx2RzhHEeou2R" }
-                        ]},
-                        { id: "8_coin_puzzle_with_15_pieces", name: "8-Coin Puzzle with 15 Pieces", order: 3, runs: [
-                            { runner: "stEv", time: "14.30", date: "2024-10-05", videoLink: "https://youtu.be/1lkjzmiZAfg?si=w_mfLDrA3J1ArZx3" },
-                            { runner: "Cappu", time: "14.76", date: "2024-08-12", videoLink: "https://youtu.be/ErXTRMAaFqk" },
-                            { runner: "Nisi Sm64", time: "14.80", date: "2024-08-11", videoLink: "https://youtu.be/7o4CzkXcmqs?si=oGV8w3oHY5OGkh8g" },
-                            { runner: "Major", time: "15.70", date: "2024-08-11", videoLink: "https://youtu.be/FM74-fMh46E?si=l7cgI0av9OIbPZW6" }
-                        ]},
-                        { id: "red_hot_log_rolling", name: "Red-Hot Log Rolling", order: 4, runs: [
-                            { runner: "Nisi sm64", time: "13.43", date: "2020-12-17", videoLink: "https://youtu.be/i1jXkfIe-Dk?si=H3oPW9K55ggtn-VF" }
-                        ]},
+                        { id: "boil_the_big_bully", name: "Boil the Big Bully", order: 1, runs: []},
+                        { id: "bully_the_bullies", name: "Bully the Bullies", order: 2, runs: []},
+                        { id: "8_coin_puzzle_with_15_pieces", name: "8-Coin Puzzle with 15 Pieces", order: 3, runs: []},
+                        { id: "red_hot_log_rolling", name: "Red-Hot Log Rolling", order: 4, runs: []},
                         { id: "hot_foot_it_into_the_volcano", name: "Hot-Foot-It into the Volcano", order: 5, runs: [] },
                         { id: "elevator_tour_in_the_volcano", name: "Elevator Tour in the Volcano", order: 6, runs: [] },
                         { id: "lll_100_coins", name: "LLL 100 Coins", order: 7, runs: [] }
                     ]},
                     { id: "ssl", name: "Shifting Sand Land", order: 8, stars: [
                         { id: "in_the_talons_of_the_big_bird", name: "In the Talons of the Big Bird", order: 1, runs: [] },
-                        { id: "shining_atop_the_pyramid", name: "Shining Atop the Pyramid", order: 2, runs: [
-                            { runner: "SpeedVortex", time: "6.93", date: "2024-08-17", videoLink: "https://youtu.be/8z5p9iP2J28?si=GAQUeG7rm6p2oN5i" },
-                            { runner: "Cabinet_Pie", time: "6.96", date: "2024-04-07", videoLink: "https://youtu.be/ultWB5nUVaE?si=WA_4B3IK0wJLFN2A" },
-                            { runner: "Chillo", time: "6.96", date: "2024-08-11", videoLink: "https://youtu.be/-YyDmxaJR8o?si=Iiqj2RI2HjAY2pOJ" }
-                        ]},
-                        { id: "inside_the_ancient_pyramid", name: "Inside the Ancient Pyramid", order: 3, runs: [
-                            { runner: "Nisi Sm64", time: "15.03", date: "2022-06-10", videoLink: "https://youtu.be/g9fNot55y0c?si=lO5Gm0BKVH0vVd-b" },
-                            { runner: "Sebastian", time: "19.70", date: "2024-09-23", videoLink: "https://youtu.be/48sGOYYiDBM?si=cSRNuoQK9eGuw4af" }
-                        ]},
+                        { id: "shining_atop_the_pyramid", name: "Shining Atop the Pyramid", order: 2, runs: []},
+                        { id: "inside_the_ancient_pyramid", name: "Inside the Ancient Pyramid", order: 3, runs: []},
                         { id: "stand_tall_on_the_four_pillars", name: "Stand Tall on the Four Pillars", order: 4, runs: [] },
                         { id: "free_flying_for_8_red_coins", name: "Free Flying for 8 Red Coins", order: 5, runs: [] },
                         { id: "pyramid_puzzle", name: "Pyramid Puzzle", order: 6, runs: [] },
@@ -729,59 +691,34 @@
                     ]},
                     { id: "sl", name: "Snowman's Land", order: 10, stars: [
                         { id: "snowmans_big_head", name: "Snowman's Big Head", order: 1, runs: [] },
-                        { id: "chill_with_the_bully", name: "Chill with the Bully", order: 2, runs: [
-                            { runner: "Cabinet_Pie", time: "12.46", date: "2024-08-25", videoLink: "https://www.youtube.com/watch?v=hARdphGmL8I" },
-                            { runner: "Nisi sm64", time: "12.96", date: "2024-08-24", videoLink: "https://youtu.be/Ifbr_VPftQE?si=lifaTvmJL7IPioWQ" }
-                        ]},
-                        { id: "in_the_deep_freeze", name: "In the Deep Freeze", order: 3, runs: [
-                            { runner: "stEv", time: "5.56", date: "2024-10-03", videoLink: "https://youtu.be/uUqM3ERHiB0?si=Zgf6y3VefLJx6ZfN" },
-                            { runner: "SpeedVortex", time: "5.70", date: "2024-08-14", videoLink: "https://youtu.be/7fC7r_bY3J4?si=_MhOR535y7LhNJr4" },
-                            { runner: "Cappu", time: "5.86", date: "2024-08-11", videoLink: "https://youtu.be/rQTjPTqDucU?si=-tbmzqVe_GvXXofl" },
-                            { runner: "Chillo", time: "5.86", date: "2024-08-12", videoLink: "https://youtu.be/zLZbLtZUQ0w?si=-5hRP02la90bfbvU" },
-                            { runner: "Nisi Sm64", time: "5.93", date: "2024-08-11", videoLink: "https://youtu.be/xmDfiugpOXo?si=JVWpLx4I9FvVtWp9" }
-                        ]},
+                        { id: "chill_with_the_bully", name: "Chill with the Bully", order: 2, runs: []},
+                        { id: "in_the_deep_freeze", name: "In the Deep Freeze", order: 3, runs: []},
                         { id: "whirl_from_the_freezing_pond", name: "Whirl from the Freezing Pond", order: 4, runs: [] },
                         { id: "shell_shreddin_for_8_red_coins", name: "Shell Shreddin' for 8 Red Coins", order: 5, runs: [] },
                         { id: "into_the_igloo", name: "Into the Igloo", order: 6, runs: [] },
                         { id: "sl_100_coins", name: "SL 100 Coins", order: 7, runs: [] }
                     ]},
                     { id: "wdw", name: "Wet-Dry World", order: 11, stars: [
-                        { id: "shocking_arrow_lifts", name: "Shocking Arrow Lifts!", order: 1, runs: [
-                            { runner: "Speedvortex", time: "13.73", date: "2024-08-13", videoLink: "https://youtu.be/3GegUaMW6f4?si=1phX1J5ETgVPnDHG" }
-                        ]},
-                        { id: "top_o_the_town", name: "Top O' The Town", order: 2, runs: [
-                            { runner: "Chillo", time: "26.40", date: "2024-08-13", videoLink: "https://youtu.be/Pu0nGTuSz3g?si=Fjc1gKTh0QJTs8fj" }
-                        ]},
+                        { id: "shocking_arrow_lifts", name: "Shocking Arrow Lifts!", order: 1, runs: []},
+                        { id: "top_o_the_town", name: "Top O' The Town", order: 2, runs: []},
                         { id: "secrets_in_the_shallows_and_sky", name: "Secrets in the Shallows & Sky", order: 3, runs: [] },
-                        { id: "express_elevators_hurry_up", name: "Express Elevators--Hurry Up!", order: 4, runs: [
-                             { runner: "SpeedVortex", time: "25.63", date: "2024-08-13", videoLink: "https://youtu.be/AcjU5HmZZFM?si=gzoL53U37f14n4Lt" }
-                        ]},
+                        { id: "express_elevators_hurry_up", name: "Express Elevators--Hurry Up!", order: 4, runs: []},
                         { id: "go_to_town_for_red_coins", name: "Go to Town for Red Coins", order: 5, runs: [] },
                         { id: "quick_race_through_downtown", name: "Quick Race through Downtown", order: 6, runs: [] },
                         { id: "wdw_100_coins", name: "WDW 100 Coins", order: 7, runs: [] }
                     ]},
                     { id: "ttm", name: "Tall, Tall Mountain", order: 12, stars: [
-                        { id: "scale_the_mountain", name: "Scale the Mountain", order: 1, runs: [
-                            { runner: "SpeedVortex", time: "20.86", date: "2024-08-13", videoLink: "https://youtu.be/GaT8k467-q8?si=FSUZd58pItsZx73g" }
-                        ]},
+                        { id: "scale_the_mountain", name: "Scale the Mountain", order: 1, runs: []},
                         { id: "mystery_of_the_monkey_cage", name: "Mystery of the Monkey Cage", order: 2, runs: [] },
                         { id: "scary_shrooms_red_coins", name: "Scary 'Shrooms, Red Coins", order: 3, runs: [] },
-                        { id: "mysterious_mountainside", name: "Mysterious Mountainside", order: 4, runs: [
-                            { runner: "SpeedVortex", time: "7.56", date: "2025-07-05", videoLink: "https://youtu.be/3OmPz3eEb14" }
-                        ]},
+                        { id: "mysterious_mountainside", name: "Mysterious Mountainside", order: 4, runs: []},
                         { id: "breathtaking_view_from_bridge", name: "Breathtaking View from Bridge", order: 5, runs: [] },
-                        { id: "blast_to_the_lonely_mushroom", name: "Blast to the Lonely Mushroom", order: 6, runs: [
-                            { runner: "SpeedVortex", time: "11.23", date: "2024-08-13", videoLink: "https://youtu.be/nXnagxFRno0?si=d-tKNAsxzjA4WG5H" }
-                        ]},
+                        { id: "blast_to_the_lonely_mushroom", name: "Blast to the Lonely Mushroom", order: 6, runs: []},
                         { id: "ttm_100_coins", name: "TTM 100 Coins", order: 7, runs: [] }
                     ]},
                     { id: "thi", name: "Tiny-Huge Island", order: 13, stars: [
-                        { id: "pluck_the_piranha_flower", name: "Pluck the Piranha Flower", order: 1, runs: [
-                             { runner: "SpeedVortex", time: "24.20", date: "2024-08-13", videoLink: "https://youtu.be/6fYTMUhKkis?si=9Bw6DGzmIFD7b1ii" }
-                        ]},
-                        { id: "the_tip_top_of_the_huge_island", name: "The Tip Top of the Huge Island", order: 2, runs: [
-                            { runner: "Cappu", time: "20.96", date: "2024-08-11", videoLink: "https://youtu.be/LVIQl0_CXuE?si=jyMpnzYafjY2KC50" }
-                        ]},
+                        { id: "pluck_the_piranha_flower", name: "Pluck the Piranha Flower", order: 1, runs: []},
+                        { id: "the_tip_top_of_the_huge_island", name: "The Tip Top of the Huge Island", order: 2, runs: []},
                         { id: "rematch_with_koopa_the_quick", name: "Rematch with Koopa the Quick", order: 3, runs: [] },
                         { id: "five_itty_bitty_secrets", name: "Five Itty Bitty Secrets", order: 4, runs: [] },
                         { id: "wigglers_red_coins", name: "Wiggler's Red Coins", order: 5, runs: [] },
@@ -791,64 +728,28 @@
                     { id: "ttc", name: "Tick Tock Clock", order: 14, stars: [
                         { id: "roll_into_the_cage", name: "Roll into the Cage", order: 1, runs: [] },
                         { id: "the_pit_and_the_pendulums", name: "The Pit and the Pendulums", order: 2, runs: [] },
-                        { id: "get_a_hand", name: "Get a Hand", order: 3, runs: [
-                            { runner: "SpeedVortex", time: "8.96", date: "2024-08-13", videoLink: "https://youtu.be/JFZ29wYU--0?si=UP9gyjSu7FfBqnm2" }
-                        ]},
+                        { id: "get_a_hand", name: "Get a Hand", order: 3, runs: []},
                         { id: "stomp_on_the_thwomp", name: "Stomp on the Thwomp", order: 4, runs: [] },
                         { id: "timed_jumps_on_moving_bars", name: "Timed Jumps on Moving Bars", order: 5, runs: [] },
-                        { id: "stop_time_for_red_coins", name: "Stop Time for Red Coins", order: 6, runs: [
-                            { runner: "Cappu", time: "14.30", date: "2024-08-11", videoLink: "https://youtu.be/yW2_-kILCHI?si=JXdqZNLgVu0qNSxQ" }
-                        ]},
+                        { id: "stop_time_for_red_coins", name: "Stop Time for Red Coins", order: 6, runs: []},
                         { id: "ttc_100_coins", name: "TTC 100 Coins", order: 7, runs: [] }
                     ]},
                     { id: "rr", name: "Rainbow Ride", order: 15, stars: [
-                        { id: "cruiser_crossing_the_rainbow", name: "Cruiser Crossing the Rainbow", order: 1, runs: [
-                            { runner: "Cappu", time: "21.16", date: "2024-08-11", videoLink: "https://youtu.be/9XkQGHd5Yok?si=ZHkKMKMbTCmEO3MY" },
-                            { runner: "Nisi Sm64", time: "23.76", date: "2024-08-11", videoLink: "https://youtu.be/nN6AcfpZQw4?si=d7cSnU4TsDpl2poQ" },
-                            { runner: "Chillo", time: "31.06", date: "2024-08-11", videoLink: "https://youtu.be/0GkFblHbXFo?si=edrk5CtRiBtdedrl" }
-                        ]},
-                        { id: "the_big_house_in_the_sky", name: "The Big House in the Sky", order: 2, runs: [
-                            { runner: "Cappu", time: "2:03.83", date: "2024-08-13", videoLink: "https://youtu.be/pmwHNLrPi8o" },
-                            { runner: "WRandY", time: "2:08.50", date: "2024-02-09", videoLink: "https://b23.tv/zmOucVf" },
-                            { runner: "Nisi Sm64", time: "2:10.20", date: "2021-03-04", videoLink: "https://youtu.be/pVmovfdrHCg?si=XfwLqa_HeXbi3Is5" }
-                        ]},
-                        { id: "coins_amassed_in_a_maze", name: "Coins Amassed in a Maze", order: 3, runs: [
-                            { runner: "stEv", time: "23.96", date: "2024-10-03", videoLink: "https://youtu.be/OCXyAUIZ3c0?si=c0hJkloq934wjW2N" },
-                            { runner: "Cappu", time: "25.60", date: "2024-08-11", videoLink: "https://youtu.be/uYsY55hiVqc?si=OErkBVq-BPUN1wmq" }
-                        ]},
-                        { id: "swingin_in_the_breeze", name: "Swingin' in the Breeze", order: 4, runs: [
-                            { runner: "Speedvortex", time: "13.86", date: "2024-08-13", videoLink: "https://youtu.be/ywRi4kdg3uE?si=LG6hJb7UJpVQtTzi" },
-                            { runner: "Chillo", time: "15.93", date: "2024-08-12", videoLink: "https://youtu.be/7F9zom6vsI4?si=6QL7zDvw8oT7rGAs" }
-                        ]},
-                        { id: "tricky_triangles", name: "Tricky Triangles!", order: 5, runs: [
-                            { runner: "stEv", time: "13.03", date: "2024-10-05", videoLink: "https://youtu.be/37P6VLXTX4w?si=VYpc7PMLzqynH9Tq" },
-                            { runner: "Chillo", time: "16.60", date: "2024-08-12", videoLink: "https://youtu.be/WG0XX-MO-Fg?si=GVF3e69PcsIvZHt3" }
-                        ]},
+                        { id: "cruiser_crossing_the_rainbow", name: "Cruiser Crossing the Rainbow", order: 1, runs: []},
+                        { id: "the_big_house_in_the_sky", name: "The Big House in the Sky", order: 2, runs: []},
+                        { id: "coins_amassed_in_a_maze", name: "Coins Amassed in a Maze", order: 3, runs: []},
+                        { id: "swingin_in_the_breeze", name: "Swingin' in the Breeze", order: 4, runs: []},
+                        { id: "tricky_triangles", name: "Tricky Triangles!", order: 5, runs: []},
                         { id: "somewhere_over_the_rainbow", name: "Somewhere over the Rainbow", order: 6, runs: [] },
                         { id: "rr_100_coins", name: "RR 100 Coins", order: 7, runs: [] }
                     ]},
                     { id: "bowser_stages", name: "Bowser Stages", order: 16, stars: [
-                        { id: "bowser_in_the_dark_world_no_reds", name: "Bowser in the Dark World No Reds", order: 1, runs: [
-                            { runner: "stEv", time: "27.83", date: "2024-10-04", videoLink: "https://youtu.be/qQS6BGZgTQs?si=XVnJSraXvLiRm7le" }
-                        ]},
-                        { id: "bowser_in_the_dark_world_reds", name: "Bowser in the Dark World Reds", order: 2, runs: [
-                            { runner: "stEv", time: "47.33", date: "2024-10-03", videoLink: "https://youtu.be/_2Z4HtjkqV0?si=A27lvbqQHRbKy3iw" },
-                            { runner: "Mack64", time: "47.90", date: "2024-09-01", videoLink: "https://youtu.be/deiGDUoY1tI?si=CPbv_nYDqZ8CDo3Z" },
-                            { runner: "Cabinet_Pie", time: "50.30", date: "2024-07-16", videoLink: "https://youtu.be/kyfY6Rw8O_w?si=R1k7PLmaeOO2Ve8P" }
-                        ]},
-                        { id: "bowser_in_the_fire_sea_no_reds", name: "Bowser in the Fire Sea No Reds", order: 3, runs: [
-                             { runner: "stEv", time: "37.33", date: "2024-10-03", videoLink: "https://youtu.be/TinkZuCVE74?si=p677_9gl2aq_dbc0" }
-                        ]},
-                        { id: "bowser_in_the_fire_sea_reds", name: "Bowser in the Fire Sea Reds", order: 4, runs: [
-                            { runner: "stEv", time: "53.30", date: "2024-10-05", videoLink: "https://youtu.be/5IverqtAlPo?si=Rx-xOCmTiEos5IyT" },
-                            { runner: "Cappu", time: "1:09.03", date: "2024-08-11", videoLink: "https://youtu.be/NlMNUVJ6SS0?si=P3DTwNs4A5oScSZ7" }
-                        ]},
-                        { id: "bowser_in_the_sky_no_reds", name: "Bowser in the Sky No Reds", order: 5, runs: [
-                             { runner: "Sebastian", time: "48.70", date: "2024-09-21", videoLink: "https://youtu.be/CaUnnUjh3Ns?si=SevzYTW2VkZEZBVn" }
-                        ]},
-                        { id: "bowser_in_the_sky_reds", name: "Bowser in the Sky Reds", order: 6, runs: [
-                            { runner: "Cappu", time: "1:17.36", date: "2024-08-11", videoLink: "https://youtu.be/rOb_OTQeI6o?si=yl7_Cv6Tgb-cfHya" }
-                        ]}
+                        { id: "bowser_in_the_dark_world_no_reds", name: "Bowser in the Dark World No Reds", order: 1, runs: []},
+                        { id: "bowser_in_the_dark_world_reds", name: "Bowser in the Dark World Reds", order: 2, runs: []},
+                        { id: "bowser_in_the_fire_sea_no_reds", name: "Bowser in the Fire Sea No Reds", order: 3, runs: []},
+                        { id: "bowser_in_the_fire_sea_reds", name: "Bowser in the Fire Sea Reds", order: 4, runs: []},
+                        { id: "bowser_in_the_sky_no_reds", name: "Bowser in the Sky No Reds", order: 5, runs: []},
+                        { id: "bowser_in_the_sky_reds", name: "Bowser in the Sky Reds", order: 6, runs: []}
                     ]},
                     { id: "secret_stars", name: "Castle Secret Stars", order: 17, stars: [
                         { id: "the_princesss_secret_slide", name: "The Princess's Secret Slide", order: 1, runs: [] },
@@ -866,18 +767,6 @@
                 console.log("Starting database seed...");
                 const coursesCollection = db.collection('courses');
                 
-                seedData.courses.forEach(course => {
-                    course.stars.forEach(star => {
-                        star.runs.forEach(run => {
-                            run.runner_normalized = run.runner.toLowerCase().trim();
-                            run.time_numeric = parseTimeToNumeric(run.time);
-                            run.time_str = run.time;
-                            delete run.time;
-                            run.status = 'verified';
-                        });
-                    });
-                });
-
                 const addBatch = db.batch();
                 for (const course of seedData.courses) {
                     const courseRef = coursesCollection.doc(course.id);
@@ -885,10 +774,6 @@
                     for (const star of course.stars) {
                         const starRef = courseRef.collection('stars').doc(star.id);
                         addBatch.set(starRef, { name: star.name, order: star.order });
-                        for (const run of star.runs) {
-                            const runRef = starRef.collection('runs').doc();
-                            addBatch.set(runRef, run);
-                        }
                     }
                 }
                 await addBatch.commit();
@@ -935,9 +820,27 @@
                         </form>
                     </div>
                 </div>
+                 <div id="login-modal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-btn" onclick="closeModal('login-modal')">&times;</span>
+                        <h2>Moderator Login</h2>
+                        <form id="login-form" onsubmit="handleLogin(event)">
+                            <label for="email">Email:</label>
+                            <input type="email" id="email" required>
+                            <label for="password">Password:</label>
+                            <input type="password" id="password" required>
+                            <button type="submit">Log In</button>
+                            <p id="login-error" class="error-message"></p>
+                        </form>
+                    </div>
+                </div>
             `);
 
-            updateModeratorUI(false);
+            // Initialize UI based on auth state
+            auth.onAuthStateChanged(user => {
+                updateModeratorUI(user);
+            });
+            
             router();
         });
     </script>
