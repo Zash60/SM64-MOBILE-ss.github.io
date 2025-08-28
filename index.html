@@ -306,7 +306,6 @@
                         starInfo.runs.sort((a, b) => a.time_numeric - b.time_numeric);
                         const originalRunnerName = starInfo.runs[0].runner;
                         
-                        // *** BUG FIX: Normalize runner name to be case-insensitive ***
                         const normalizedKey = originalRunnerName.toLowerCase().trim();
 
                         if (!appState.starsCache[starInfo.courseId]) {
@@ -316,7 +315,7 @@
 
                         if (!wrData[normalizedKey]) {
                             wrData[normalizedKey] = {
-                                displayName: originalRunnerName, // Store first-seen capitalization
+                                displayName: originalRunnerName,
                                 count: 0,
                                 stars: []
                             };
@@ -459,6 +458,7 @@
             
             const runData = {
                 runner: runnerName,
+                runner_normalized: runnerName.toLowerCase().trim(), // *** BUG FIX: Add normalized name ***
                 time_str: timeStr,
                 time_numeric: parseTimeToNumeric(timeStr),
                 date: form.date.value,
@@ -469,7 +469,8 @@
             const runsRef = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs');
             
             try {
-                const existingRunSnapshot = await runsRef.where('runner', '==', runnerName).where('status', '==', 'verified').limit(1).get();
+                // *** BUG FIX: Query by normalized name ***
+                const existingRunSnapshot = await runsRef.where('runner_normalized', '==', runData.runner_normalized).where('status', '==', 'verified').limit(1).get();
 
                 if (!existingRunSnapshot.empty) {
                     const existingTime = existingRunSnapshot.docs[0].data().time_numeric;
@@ -505,10 +506,12 @@
             const runId = form['edit-run-id'].value;
             const courseId = form['edit-course-id'].value;
             const starId = form['edit-star-id'].value;
+            const runnerName = form['edit-runner'].value;
             const timeStr = form['edit-time'].value;
             
             const updatedData = {
-                runner: form['edit-runner'].value,
+                runner: runnerName,
+                runner_normalized: runnerName.toLowerCase().trim(), // *** BUG FIX: Update normalized name ***
                 time_str: timeStr,
                 time_numeric: parseTimeToNumeric(timeStr),
                 date: form['edit-date'].value,
@@ -842,6 +845,7 @@
                 seedData.courses.forEach(course => {
                     course.stars.forEach(star => {
                         star.runs.forEach(run => {
+                            run.runner_normalized = run.runner.toLowerCase().trim();
                             run.time_numeric = parseTimeToNumeric(run.time);
                             run.time_str = run.time;
                             delete run.time;
