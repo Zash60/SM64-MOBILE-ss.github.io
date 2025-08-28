@@ -64,6 +64,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
+        // ... (todo o JavaScript vai aqui)
+        
         // ==============================================================================
         // --- 1. CONFIG & APP STATE ---
         // ==============================================================================
@@ -458,7 +460,7 @@
             
             const runData = {
                 runner: runnerName,
-                runner_normalized: runnerName.toLowerCase().trim(), // *** BUG FIX: Add normalized name ***
+                runner_normalized: runnerName.toLowerCase().trim(),
                 time_str: timeStr,
                 time_numeric: parseTimeToNumeric(timeStr),
                 date: form.date.value,
@@ -469,7 +471,6 @@
             const runsRef = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs');
             
             try {
-                // *** BUG FIX: Query by normalized name ***
                 const existingRunSnapshot = await runsRef.where('runner_normalized', '==', runData.runner_normalized).where('status', '==', 'verified').limit(1).get();
 
                 if (!existingRunSnapshot.empty) {
@@ -511,7 +512,7 @@
             
             const updatedData = {
                 runner: runnerName,
-                runner_normalized: runnerName.toLowerCase().trim(), // *** BUG FIX: Update normalized name ***
+                runner_normalized: runnerName.toLowerCase().trim(),
                 time_str: timeStr,
                 time_numeric: parseTimeToNumeric(timeStr),
                 date: form['edit-date'].value,
@@ -536,10 +537,33 @@
             if (!appState.isModerator) return;
             if (!confirm(`Are you sure you want to ${newStatus} this run?`)) return;
 
+            const runRef = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId);
+
             try {
-                await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId).update({
-                    status: newStatus
-                });
+                if (newStatus === 'verified') {
+                    const runDoc = await runRef.get();
+                    if (!runDoc.exists) throw new Error("Run not found");
+                    const runData = runDoc.data();
+
+                    const query = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs')
+                        .where('runner_normalized', '==', runData.runner_normalized)
+                        .where('status', '==', 'verified');
+                    
+                    const oldRunsSnapshot = await query.get();
+                    
+                    const batch = db.batch();
+                    oldRunsSnapshot.forEach(doc => {
+                        console.log(`Deleting old verified run ${doc.id} for runner ${runData.runner}`);
+                        batch.delete(doc.ref);
+                    });
+                    
+                    batch.update(runRef, { status: 'verified' });
+                    await batch.commit();
+
+                } else { // For 'rejected' or other statuses
+                    await runRef.update({ status: newStatus });
+                }
+
                 alert(`Run has been ${newStatus}.`);
                 router();
             } catch (error) {
