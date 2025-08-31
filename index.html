@@ -610,7 +610,9 @@
                 courses: [
                     { id: "bob", name: "Bob-omb Battlefield", order: 1, stars: [
                         { id: "big_bob_omb_on_the_summit", name: "Big Bob-Omb on the Summit", order: 1, runs: [] },
-                        { id: "footrace_with_koopa_the_quick", name: "Footrace with Koopa the Quick", order: 2, runs: [] },
+                        { id: "footrace_with_koopa_the_quick", name: "Footrace with Koopa the Quick", order: 2, runs: [
+                            { runner: "Speedvortex", time: "1:18.88", date: "2025-08-31", videoLink: "https://youtu.be/WD3PxUUCjo" }
+                        ]},
                         { id: "shoot_to_the_island_in_the_sky", name: "Shoot to the Island in the Sky", order: 3, runs: [] },
                         { id: "find_the_8_red_coins", name: "Find the 8 Red Coins", order: 4, runs: [] },
                         { id: "mario_wings_to_the_sky", name: "Mario Wings to the Sky", order: 5, runs: [] },
@@ -637,8 +639,12 @@
                     ]},
                     { id: "ccm", name: "Cool, Cool Mountain", order: 4, stars: [
                         { id: "slip_slidin_away", name: "Slip Slidin' Away", order: 1, runs: [] },
-                        { id: "lil_penguin_lost", name: "Li'l Penguin Lost", order: 2, runs: [] },
-                        { id: "big_penguin_race", name: "Big Penguin Race", order: 3, runs: [] },
+                        { id: "lil_penguin_lost", name: "Li'l Penguin Lost", order: 2, runs: [
+                            { runner: "Zackajin", time: "20.03", date: "2025-08-13", videoLink: "https://youtu.be/CmmiWadG53jc?feature=shared" }
+                        ]},
+                        { id: "big_penguin_race", name: "Big Penguin Race", order: 3, runs: [
+                            { runner: "Zackajin", time: "48.96", date: "2025-08-13", videoLink: "https://youtu.be/EastsEGNSK?feature=shared" }
+                        ]},
                         { id: "frosty_slide_for_8_red_coins", name: "Frosty Slide for 8 Red Coins", order: 4, runs: []},
                         { id: "snowmans_lost_his_head", name: "Snowman's Lost his Head", order: 5, runs: []},
                         { id: "wall_kicks_will_work", name: "Wall Kicks will Work", order: 6, runs: []},
@@ -767,6 +773,19 @@
                 console.log("Starting database seed...");
                 const coursesCollection = db.collection('courses');
                 
+                // Add normalized name and numeric time to all seed runs
+                seedData.courses.forEach(course => {
+                    course.stars.forEach(star => {
+                        star.runs.forEach(run => {
+                            run.runner_normalized = run.runner.toLowerCase().trim();
+                            run.time_numeric = parseTimeToNumeric(run.time);
+                            run.time_str = run.time;
+                            delete run.time;
+                            run.status = 'verified';
+                        });
+                    });
+                });
+
                 const addBatch = db.batch();
                 for (const course of seedData.courses) {
                     const courseRef = coursesCollection.doc(course.id);
@@ -774,6 +793,10 @@
                     for (const star of course.stars) {
                         const starRef = courseRef.collection('stars').doc(star.id);
                         addBatch.set(starRef, { name: star.name, order: star.order });
+                        for (const run of star.runs) {
+                            const runRef = starRef.collection('runs').doc();
+                            addBatch.set(runRef, run);
+                        }
                     }
                 }
                 await addBatch.commit();
@@ -836,7 +859,6 @@
                 </div>
             `);
 
-            // Initialize UI based on auth state
             auth.onAuthStateChanged(user => {
                 updateModeratorUI(user);
             });
