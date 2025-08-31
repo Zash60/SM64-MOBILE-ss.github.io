@@ -3,44 +3,32 @@
 <head>
     <title>SM64 Mobile - Single Star Records</title>
     <style>
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid black; padding: 5px; text-align: left; }
-        a { color: blue; text-decoration: underline; }
-        section { margin-bottom: 20px; }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:hover { background-color: #f5f5f5; }
+        .tab-links { list-style: none; padding: 0; margin: 0 0 20px 0; border-bottom: 1px solid #ddd; }
+        .tab-links li { display: inline-block; padding: 10px 15px; cursor: pointer; }
+        .tab-links li.active-link { background-color: #f2f2f2; border: 1px solid #ddd; border-bottom: none; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
         form label { display: block; margin-bottom: 10px; }
+        input, select, button { padding: 5px; margin: 5px 0; }
+        #auth { margin-bottom: 20px; }
     </style>
 </head>
 <body>
     <h1>SM64 Mobile - Single Star Records</h1>
-    <nav>
-        <a href="#courses">Courses</a> |
-        <a href="#world-records">World Records</a>
-    </nav>
-    <a href="#submit">Submit Run</a> |
 
-    <section id="courses">
-        <h2>Courses</h2>
-        <ul>
-            <li>Bob-omb Battlefield</li>
-            <li>Whomp's Fortress</li>
-            <li>Jolly Roger Bay</li>
-            <li>Cool Cool Mountain</li>
-            <li>Big Boo's Haunt</li>
-            <li>Hazy Maze Cave</li>
-            <li>Lethal Lava Land</li>
-            <li>Shifting Sand Land</li>
-            <li>Dire, Dire Docks</li>
-            <li>Snowman's Land</li>
-            <li>Wet-Dry World</li>
-            <li>Tall, Tall Mountain</li>
-            <li>Tiny-Huge Island</li>
-            <li>Tick Tock Clock</li>
-            <li>Rainbow Ride</li>
-            <li>Secret Stars</li>
-        </ul>
-    </section>
+    <ul class="tab-links">
+        <li data-tab="single" class="active-link">Single Stars</li>
+        <li data-tab="mini">Minigames</li>
+        <li data-tab="submit-tab">Submit Run</li>
+        <li data-tab="mod" id="mod-tab-link" style="display:none;">Moderation</li>
+    </ul>
 
-    <section id="world-records">
+    <div id="single" class="tab-content active">
         <h2>All SS WR + Leaderboard</h2>
         <table id="ss-wr-table">
             <thead>
@@ -76,7 +64,9 @@
             </thead>
             <tbody></tbody>
         </table>
+    </div>
 
+    <div id="mini" class="tab-content">
         <h2>All Minigame WR + Leaderboard</h2>
         <table id="mini-wr-table">
             <thead>
@@ -112,9 +102,9 @@
             </thead>
             <tbody></tbody>
         </table>
-    </section>
+    </div>
 
-    <section id="submit">
+    <div id="submit-tab" class="tab-content">
         <h2>Submit Run</h2>
         <form id="submit-form">
             <label>Type: <select id="type">
@@ -135,9 +125,9 @@
             <label>Note: <input id="note"></label>
             <button type="submit">Submit</button>
         </form>
-    </section>
+    </div>
 
-    <section id="moderation" style="display:none;">
+    <div id="mod" class="tab-content">
         <h2>Moderation</h2>
         <div id="auth">
             <input id="email" placeholder="Email">
@@ -163,7 +153,7 @@
             </thead>
             <tbody></tbody>
         </table>
-    </section>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -233,12 +223,6 @@
 
         const courseColors = ['#90EE90', '#ADD8E6', '#D3D3D3', '#87CEEB', '#FFD700', '#A52A2A', '#FF0000', '#FFFF00', '#EE82EE', '#FFB6C1', '#FFA500', '#20B2AA', '#800080', '#FF4500', '#DA70D6', '#EEE8AA'];
 
-        function getCourseColor(course) {
-            const keys = Object.keys(courses);
-            const idx = keys.indexOf(course);
-            return courseColors[idx] || '#FFFFFF';
-        }
-
         function timeToSeconds(time) {
             if (typeof time !== 'string') return Infinity;
             if (time.includes(':')) {
@@ -256,6 +240,18 @@
         }
 
         window.onload = () => {
+            const tabLinks = document.querySelectorAll('.tab-links li');
+            tabLinks.forEach(link => {
+                link.onclick = () => {
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    document.getElementById(link.dataset.tab).classList.add('active');
+                    tabLinks.forEach(l => l.classList.remove('active-link'));
+                    link.classList.add('active-link');
+                };
+            });
+            // Activate first tab
+            tabLinks[0].click();
+
             const itemSelect = document.getElementById('item-select');
             const typeSelect = document.getElementById('type');
             typeSelect.onchange = () => {
@@ -293,12 +289,12 @@
 
             auth.onAuthStateChanged(user => {
                 if (user) {
-                    document.getElementById('moderation').style.display = 'block';
+                    document.getElementById('mod-tab-link').style.display = 'inline-block';
                     document.getElementById('login').style.display = 'none';
                     document.getElementById('logout').style.display = 'inline';
                     loadPending();
                 } else {
-                    document.getElementById('moderation').style.display = 'none';
+                    document.getElementById('mod-tab-link').style.display = 'none';
                     document.getElementById('login').style.display = 'inline';
                     document.getElementById('logout').style.display = 'none';
                 }
