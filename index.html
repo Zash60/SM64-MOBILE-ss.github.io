@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Mario 64 Mobile Leaderboard</title>
+    <style>
+        body {
+            background-color: #2c2f33;
+            color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: auto;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #ffcc00;
+            border-bottom: 2px solid #ffcc00;
+            padding-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #4f545c;
+            padding: 8px;
+            text-align: left;
+            vertical-align: middle;
+        }
+        thead th {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            position: sticky;
+            top: 0;
+        }
+        a {
+            color: #61dafb;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .course-header th {
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        /* Course Colors */
+        .course-bob { background-color: #2e7d32; } /* Bob-omb Battlefield */
+        .course-wf { background-color: #6a6a6a; } /* Whomp's Fortress */
+        .course-jrb { background-color: #1565c0; } /* Jolly Roger Bay */
+        .course-ccm { background-color: #e0e0e0; color: #111; } /* Cool, Cool Mountain */
+        .course-bbh { background-color: #4a148c; } /* Big Boo's Haunt */
+        .course-hmc { background-color: #d84315; } /* Hazy Maze Cave */
+        .course-lll { background-color: #c62828; } /* Lethal Lava Land */
+        .course-ssl { background-color: #ffc107; color: #111; } /* Shifting Sand Land */
+        .course-ddd { background-color: #00838f; } /* Dire, Dire Docks */
+        .course-sl { background-color: #9ccc65; color: #111; } /* Snowman's Land */
+        .course-wdw { background-color: #4db6ac; color: #111; } /* Wet-Dry World */
+        .course-ttm { background-color: #795548; } /* Tall, Tall Mountain */
+        .course-thi { background-color: #8bc34a; color: #111; } /* Tiny-Huge Island */
+        .course-ttc { background-color: #a1887f; color: #111; } /* Tick Tock Clock */
+        .course-rr { background-color: #673ab7; } /* Rainbow Ride */
+        .course-castle { background-color: #4527a0; } /* Secret Stars */
+
+        .minigame-header { background-color: #880e4f; }
+        .minigame-cat1 { background-color: #c51162; }
+        .minigame-cat2 { background-color: #f50057; }
+        .minigame-cat3 { background-color: #ff4081; }
+
+        .leaderboard-players {
+            background-color: #333;
+            padding: 15px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Super Mario 64 Mobile - World Records</h1>
+
+        <h2>All Stars WR + Leaderboard</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Star Name</th>
+                    <th>Player</th>
+                    <th>Real Time</th>
+                    <th>In-game Time</th>
+                    <th>Date of WR</th>
+                    <th>Link of Run</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Bob-omb Battlefield -->
+                <tr class="course-header course-bob"><th colspan="6">Bob-omb Battlefield</th></tr>
+                <tr class="course-bob"><td>Big Bob-omb on the Summit</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-bob"><td>Footrace with Koopa the Quick</td><td>Speedvortex</td><td>1:18.88</td><td>1:18.60</td><td>Aug 31, 2025</td><td><a href="https://youtu.be/WD3PxUUCjo" target="_blank">Link</a></td></tr>
+                <tr class="course-bob"><td>Shoot to the Island in the Sky</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-bob"><td>Find the 8 Red Coins</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-bob"><td>Mario Wings to the Sky</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-bob"><td>Behind Chain Chomp's Gate</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-bob"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Whomp's Fortress -->
+                <tr class="course-header course-wf"><th colspan="6">Whomp's Fortress</th></tr>
+                <tr class="course-wf"><td>Chip off Whomp's Block</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-wf"><td>To the Top of the Fortress</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-wf"><td>Shoot into the Wild Blue</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-wf"><td>Red Coins on the Floating Isle</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-wf"><td>Fall onto the Caged Island</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-wf"><td>Blast Away the Wall</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-wf"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Jolly Roger Bay -->
+                <tr class="course-header course-jrb"><th colspan="6">Jolly Roger Bay</th></tr>
+                <tr class="course-jrb"><td>Plunder in the Sunken Ship</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-jrb"><td>Can the Eel Come Out to Play?</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-jrb"><td>Treasure of the Ocean Cave</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-jrb"><td>Red Coins on the Ship Afloat</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-jrb"><td>Blast to the Stone Pillar</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-jrb"><td>Through the Jet Stream</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-jrb"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Cool, Cool Mountain -->
+                <tr class="course-header course-ccm"><th colspan="6">Cool, Cool Mountain</th></tr>
+                <tr class="course-ccm"><td>Slip Slidin' Away</td><td>Zackajin</td><td>20.03</td><td></td><td></td><td><a href="https://youtu.be/CmmiWadG53jc" target="_blank">Link</a></td></tr>
+                <tr class="course-ccm"><td>Li'l Penguin Lost</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ccm"><td>Big Penguin Race</td><td>Zackajin</td><td>49.30</td><td>48.96</td><td>Aug 13, 2025</td><td><a href="https://youtu.be/EastsEGNSK" target="_blank">Link</a></td></tr>
+                <tr class="course-ccm"><td>Frosty Slide for 8 Red Coins</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ccm"><td>Snowman's Lost His Head</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ccm"><td>Wall Kicks Will Work</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ccm"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Big Boo's Haunt -->
+                <tr class="course-header course-bbh"><th colspan="6">Big Boo's Haunt</th></tr>
+                <tr class="course-bbh"><td>Go on a Ghost Hunt</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-bbh"><td>Ride Big Boo's Merry-Go-Round</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-bbh"><td>Secret of the Haunted Books</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-bbh"><td>Seek the 8 Red Coins</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-bbh"><td>Big Boo's Balcony</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-bbh"><td>Eye to Eye in the Secret Room</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-bbh"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+                
+                <!-- Hazy Maze Cave -->
+                <tr class="course-header course-hmc"><th colspan="6">Hazy Maze Cave</th></tr>
+                <tr class="course-hmc"><td>Swimming Beast in the Cavern</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-hmc"><td>Elevate for 8 Red Coins</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-hmc"><td>Metal-Head Mario Can Move!</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-hmc"><td>Navigating the Toxic Maze</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-hmc"><td>A-Maze-ing Emergency Exit</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-hmc"><td>Watch for Rolling Rocks</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-hmc"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Lethal Lava Land -->
+                <tr class="course-header course-lll"><th colspan="6">Lethal Lava Land</th></tr>
+                <tr class="course-lll"><td>Boil the Big Bully</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-lll"><td>Bully the Bullies</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-lll"><td>8-Coin Puzzle with 15 Pieces</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-lll"><td>Red-Hot Log Rolling</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-lll"><td>Hot-Foot-It into the Volcano</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-lll"><td>Elevator Tour in the Volcano</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-lll"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Shifting Sand Land -->
+                <tr class="course-header course-ssl"><th colspan="6">Shifting Sand Land</th></tr>
+                <tr class="course-ssl"><td>In the Talons of the Big Bird</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ssl"><td>Shining Atop the Pyramid</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ssl"><td>Inside the Ancient Pyramid</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ssl"><td>Stand Tall on the Four Pillars</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ssl"><td>Free Flying for 8 Red Coins</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ssl"><td>Pyramid Puzzle</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ssl"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Dire, Dire Docks -->
+                <tr class="course-header course-ddd"><th colspan="6">Dire, Dire Docks</th></tr>
+                <tr class="course-ddd"><td>Board Bowser's Sub</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ddd"><td>Chests in the Current</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ddd"><td>Pole-Jumping for Red Coins</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ddd"><td>Through the Jet Stream</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ddd"><td>The Manta Ray's Reward</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ddd"><td>Collect the Caps...</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ddd"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Snowman's Land -->
+                <tr class="course-header course-sl"><th colspan="6">Snowman's Land</th></tr>
+                <tr class="course-sl"><td>Snowman's Big Head</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-sl"><td>Chill with the Bully</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-sl"><td>In the Deep Freeze</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-sl"><td>Whirl from the Freezing Pond</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-sl"><td>Shell Shreddin' for Red Coins</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-sl"><td>Into the Igloo</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-sl"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Wet-Dry World -->
+                <tr class="course-header course-wdw"><th colspan="6">Wet-Dry World</th></tr>
+                <tr class="course-wdw"><td>Shocking Arrow Lifts!</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-wdw"><td>Top O' The Town</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-wdw"><td>Secrets in the Shallows & Sky</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-wdw"><td>Express Elevators--Hurry Up!</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-wdw"><td>Go to Town for Red Coins</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-wdw"><td>Quick Race Through Downtown!</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-wdw"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Tall, Tall Mountain -->
+                <tr class="course-header course-ttm"><th colspan="6">Tall, Tall Mountain</th></tr>
+                <tr class="course-ttm"><td>Scale the Mountain</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ttm"><td>Mystery of the Monkey Cage</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ttm"><td>Scary 'Shrooms, Red Coins</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ttm"><td>Mysterious Mountainside</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ttm"><td>Breathtaking View from Bridge</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ttm"><td>Blast to the Lonely Mushroom</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ttm"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Tiny-Huge Island -->
+                <tr class="course-header course-thi"><th colspan="6">Tiny-Huge Island</th></tr>
+                <tr class="course-thi"><td>Pluck the Piranha Flower</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-thi"><td>The Tip Top of the Huge Island</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-thi"><td>Rematch with Koopa the Quick</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-thi"><td>Five Itty Bitty Secrets</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-thi"><td>Wiggler's Red Coins</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-thi"><td>Make Wiggler Squirm</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-thi"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Tick Tock Clock -->
+                <tr class="course-header course-ttc"><th colspan="6">Tick Tock Clock</th></tr>
+                <tr class="course-ttc"><td>Roll into the Cage</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ttc"><td>The Pit and the Pendulums</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ttc"><td>Get a Hand</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ttc"><td>Stomp on the Thwomp</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ttc"><td>Timed Jumps on Moving Bars</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ttc"><td>Stop Time for Red Coins</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-ttc"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <!-- Rainbow Ride -->
+                <tr class="course-header course-rr"><th colspan="6">Rainbow Ride</th></tr>
+                <tr class="course-rr"><td>Cruiser Crossing the Rainbow</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-rr"><td>The Big House in the Sky</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-rr"><td>Coins Amassed in a Maze</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-rr"><td>Swingin' in the Breeze</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-rr"><td>Tricky Triangles!</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-rr"><td>Somewhere Over the Rainbow</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-rr"><td>100 Coins Star</td><td></td><td></td><td></td><td></td><td></td></tr>
+                
+                <!-- Secret Stars -->
+                <tr class="course-header course-castle"><th colspan="6">Castle Secret Stars</th></tr>
+                <tr class="course-castle"><td>The Princess's Secret Slide (Box Star)</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-castle"><td>The Princess's Secret Slide (Under 21"00)</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-castle"><td>The Secret Aquarium</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-castle"><td>Tower of the Wing Cap</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-castle"><td>Cavern of the Metal Cap</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-castle"><td>Vanish Cap Under the Moat</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-castle"><td>Wing Mario Over the Rainbow</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-castle"><td>Bowser in the Dark World (8 Red Coins)</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-castle"><td>Bowser in the Fire Sea (8 Red Coins)</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="course-castle"><td>Bowser in the Sky (8 Red Coins)</td><td></td><td></td><td></td><td></td><td></td></tr>
+            </tbody>
+        </table>
+
+        <h2>All Minigame WR + Leaderboard</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name Of Stage + Minigames</th>
+                    <th>Player with WR</th>
+                    <th>Real time</th>
+                    <th>In-game Time</th>
+                    <th>Version</th>
+                    <th>Date of WR</th>
+                    <th>Link Of Run</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="minigame-header"><th colspan="8">Princess Secret Slide</th></tr>
+                <tr class="minigame-cat1"><td>No Restrictions</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="minigame-cat1"><td>No Shortcuts</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="minigame-cat1"><td>80 Coins</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+
+                <tr class="minigame-header"><th colspan="8">FootRace With Koopa The quick</th></tr>
+                <tr class="minigame-cat2"><td>No Restrictions</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="minigame-cat2"><td>No BLJ</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="minigame-cat2"><td>No Wing Cap</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="minigame-cat2"><td>No BLJ Or Wing Cap</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                
+                <tr class="minigame-header"><th colspan="8">Rematch With Koopa The Quick</th></tr>
+                <tr class="minigame-cat3"><td>No Restrictions</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="minigame-cat3"><td>No BLJ</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="minigame-cat3"><td>No Shell Glitch</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="minigame-cat3"><td>No Shell</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="minigame-cat3"><td>No BLJ Or Shell Glitch</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr class="minigame-cat3"><td>No BLJ Or Shell</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+         https://firebase.google.com/docs/web/setup#available-libraries -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-analytics.js"></script>
+
+    <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCHGM4Bw4w-3SM3ScVCLnLhcCI0ISTB7S0",
+            authDomain: "sm64-mobile-leaderboard.firebaseapp.com",
+            projectId: "sm64-mobile-leaderboard",
+            storageBucket: "sm64-mobile-leaderboard.appspot.com",
+            messagingSenderId: "474371344168",
+            appId: "1:474371344168:web:a888b644a2a0b04ec9f21d"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        firebase.analytics();
+    </script>
+
+</body>
+</html>
