@@ -62,8 +62,6 @@
         <div id="user-actions" style="margin-top: 1rem;">
             <a class="action-button" onclick="openSubmissionModal()">Submit Run</a>
             <span style="color: var(--border-color); margin: 0 10px;">|</span>
-            <a href="#minigames" class="action-button">Minigames</a>
-            <span style="color: var(--border-color); margin: 0 10px;">|</span>
             <span id="moderator-auth-section"></span>
         </div>
     </header>
@@ -174,8 +172,6 @@
                 if (pathParts.length === 1) showWRHistoryCoursesPage();
                 else if (pathParts.length === 2) showWRHistoryStarsPage(pathParts[1]);
                 else if (pathParts.length === 3) showWRHistoryLeaderboard(pathParts[1], pathParts[2]);
-            } else if (hash === '#minigames') {
-                showMinigamesPage();
             } else {
                 window.location.hash = '#home';
             }
@@ -470,46 +466,6 @@
                 renderError("Failed to load WR History.");
             });
         }
-
-        async function showMinigamesPage() {
-            renderLoader("Loading Minigames...");
-            try {
-                const snapshot = await db.collection('minigames').orderBy('order').get();
-                if (snapshot.empty) {
-                    renderError("No minigame data found. Please run `seedDatabase()` from the console to add it.");
-                    return;
-                }
-                const minigames = snapshot.docs.map(doc => doc.data());
-                
-                let minigamesHtml = '';
-                minigames.forEach(mg => {
-                    minigamesHtml += `
-                        <tr><td colspan="3" style="background-color: var(--border-color);"><strong>${mg.name}</strong></td></tr>
-                        ${mg.categories.map(cat => `
-                            <tr>
-                                <td>${cat.name}</td>
-                                <td>${cat.wr_holder || 'N/A'}</td>
-                                <td>${cat.time || 'N/A'}</td>
-                            </tr>
-                        `).join('')}
-                    `;
-                });
-
-                appContainer.innerHTML = `
-                    <h2>Minigames</h2>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr><th>Category</th><th>WR Holder</th><th>Time</th></tr>
-                            </thead>
-                            <tbody>${minigamesHtml}</tbody>
-                        </table>
-                    </div>`;
-            } catch (error) {
-                console.error("Error loading minigames:", error);
-                renderError("Failed to load minigame data.");
-            }
-        }
         
         // ==============================================================================
         // --- 4. ACTIONS & MODERATION ---
@@ -799,45 +755,52 @@
         }
         
         async function seedDatabase() {
-            console.log("This will add/update data from the PDF. It will NOT delete existing user-submitted runs.");
-            if (!confirm("This will add new collections and overwrite specific seed runs. Are you sure?")) return;
+            console.log("This will POPULATE the database. It is critical that you MANUALLY delete old collections in the Firebase Console first for a clean seed.");
+            if (!confirm("This will add new data. Are you sure?")) return;
 
             const seedData = {
-                minigames: [
-                    { name: "Princess Secret Slide", order: 1, categories: [ { name: "No Restrictions" }, { name: "No Shortcuts" }, { name: "80 Coins" } ] },
-                    { name: "FootRace With Koopa The quick", order: 2, categories: [ { name: "No Restrictions" }, { name: "No BLJ" }, { name: "No Wing Cap" }, { name: "No BLJ Or Wing Cap" } ] },
-                    { name: "Rematch With Koopa The Quick", order: 3, categories: [ { name: "No Restrictions" }, { name: "No BLJ" }, { name: "No Shell Glitch" }, { name: "No Shell" }, { name: "No BLJ Or Shell Glitch" }, { name: "No BLJ Or Shell" } ] }
-                ],
-                ss_wr_history: [
-                    { course: 'bob', star: 'footrace_with_koopa_the_quick', entry: { player: "Speedvortex", time: "1:18.88", date: "2025-08-31", video: "https://youtu.be/WD3PxUUCjo" }},
-                    { course: 'ccm', star: 'lil_penguin_lost', entry: { player: "Zackajin", time: "20.03", date: "2025-08-13", video: "https://youtu.be/CmmiWadG53jc?feature=shared" }},
-                    { course: 'ccm', star: 'big_penguin_race', entry: { player: "Zackajin", time: "48.96", date: "2025-08-13", video: "https://youtu.be/EastsEGNSK?feature=shared" }}
+                courses: [
+                    { id: "bob", name: "Bob-omb Battlefield", order: 1, stars: [ { id: "big_bob_omb_on_the_summit", name: "Big Bob-Omb on the Summit", order: 1 }, { id: "footrace_with_koopa_the_quick", name: "Footrace with Koopa the Quick", order: 2 }, { id: "shoot_to_the_island_in_the_sky", name: "Shoot to the Island in the Sky", order: 3 }, { id: "find_the_8_red_coins", name: "Find the 8 Red Coins", order: 4 }, { id: "mario_wings_to_the_sky", name: "Mario Wings to the Sky", order: 5 }, { id: "behind_chain_chomps_gate", name: "Behind Chain Chomp's Gate", order: 6 }, { id: "bob_100_coins", name: "BoB 100 Coins", order: 7 } ]},
+                    { id: "wf", name: "Whomp's Fortress", order: 2, stars: [ { id: "chip_off_whomps_block", name: "Chip off Whomp's Block", order: 1 }, { id: "to_the_top_of_the_fortress", name: "To the Top of the Fortress", order: 2 }, { id: "shoot_into_the_wild_blue", name: "Shoot into the Wild Blue", order: 3 }, { id: "red_coins_on_the_floating_isle", name: "Red Coins on the Floating Isle", order: 4 }, { id: "fall_onto_the_caged_island", name: "Fall onto the Caged Island", order: 5 }, { id: "blast_away_the_wall", name: "Blast Away the Wall", order: 6 }, { id: "wf_100_coins", name: "WF 100 Coins", order: 7 } ]},
+                    { id: "jrb", name: "Jolly Roger Bay", order: 3, stars: [ { id: "plunder_in_the_sunken_ship", name: "Plunder in the Sunken Ship", order: 1 }, { id: "can_the_eel_come_out_to_play", name: "Can the Eel Come out to Play?", order: 2 }, { id: "treasure_of_the_ocean_cave", name: "Treasure of the Ocean Cave", order: 3 }, { id: "red_coins_on_the_ship_afloat", name: "Red Coins on the Ship Afloat", order: 4 }, { id: "blast_to_the_stone_pillar", name: "Blast to the Stone Pillar", order: 5 }, { id: "through_the_jet_stream", name: "Through the Jet Stream", order: 6 }, { id: "jrb_100_coins", name: "JRB 100 Coins", order: 7 } ]},
+                    { id: "ccm", name: "Cool, Cool Mountain", order: 4, stars: [ { id: "slip_slidin_away", name: "Slip Slidin' Away", order: 1 }, { id: "lil_penguin_lost", name: "Li'l Penguin Lost", order: 2 }, { id: "big_penguin_race", name: "Big Penguin Race", order: 3 }, { id: "frosty_slide_for_8_red_coins", name: "Frosty Slide for 8 Red Coins", order: 4 }, { id: "snowmans_lost_his_head", name: "Snowman's Lost his Head", order: 5 }, { id: "wall_kicks_will_work", name: "Wall Kicks will Work", order: 6 }, { id: "ccm_100_coins", name: "CCM 100 Coins", order: 7 } ]},
+                    { id: "bbh", name: "Big Boo's Haunt", order: 5, stars: [ { id: "go_on_a_ghost_hunt", name: "Go on a Ghost Hunt", order: 1 }, { id: "ride_big_boos_merry_go_round", name: "Ride Big Boo's Merry-Go-Round", order: 2 }, { id: "secret_of_the_haunted_books", name: "Secret of the Haunted Books", order: 3 }, { id: "seek_the_8_red_coins", name: "Seek the 8 Red Coins", order: 4 }, { id: "big_boos_balcony", name: "Big Boo's Balcony", order: 5 }, { id: "eye_to_eye_in_the_secret_room", name: "Eye to Eye in the Secret Room", order: 6 }, { id: "bbh_100_coins", name: "BBH 100 Coins", order: 7 } ]},
+                    { id: "hmc", name: "Hazy Maze Cave", order: 6, stars: [ { id: "swimming_beast_in_the_cavern", name: "Swimming Beast in the Cavern", order: 1 }, { id: "elevate_for_8_red_coins", name: "Elevate for 8 Red Coins", order: 2 }, { id: "metal_head_mario_can_move", name: "Metal-Head Mario Can Move!", order: 3 }, { id: "navigating_the_toxic_maze", name: "Navigating the Toxic Maze", order: 4 }, { id: "a_maze_ing_emergency_exit", name: "A-Maze-ing Emergency Exit", order: 5 }, { id: "watch_for_rolling_rocks", name: "Watch for Rolling Rocks", order: 6 }, { id: "hmc_100_coins", name: "HMC 100 Coins", order: 7 } ]},
+                    { id: "lll", name: "Lethal Lava Land", order: 7, stars: [ { id: "boil_the_big_bully", name: "Boil the Big Bully", order: 1 }, { id: "bully_the_bullies", name: "Bully the Bullies", order: 2 }, { id: "8_coin_puzzle_with_15_pieces", name: "8-Coin Puzzle with 15 Pieces", order: 3 }, { id: "red_hot_log_rolling", name: "Red-Hot Log Rolling", order: 4 }, { id: "hot_foot_it_into_the_volcano", name: "Hot-Foot-It into the Volcano", order: 5 }, { id: "elevator_tour_in_the_volcano", name: "Elevator Tour in the Volcano", order: 6 }, { id: "lll_100_coins", name: "LLL 100 Coins", order: 7 } ]},
+                    { id: "ssl", name: "Shifting Sand Land", order: 8, stars: [ { id: "in_the_talons_of_the_big_bird", name: "In the Talons of the Big Bird", order: 1 }, { id: "shining_atop_the_pyramid", name: "Shining Atop the Pyramid", order: 2 }, { id: "inside_the_ancient_pyramid", name: "Inside the Ancient Pyramid", order: 3 }, { id: "stand_tall_on_the_four_pillars", name: "Stand Tall on the Four Pillars", order: 4 }, { id: "free_flying_for_8_red_coins", name: "Free Flying for 8 Red Coins", order: 5 }, { id: "pyramid_puzzle", name: "Pyramid Puzzle", order: 6 }, { id: "ssl_100_coins", name: "SSL 100 Coins", order: 7 } ]},
+                    { id: "ddd", name: "Dire, Dire Docks", order: 9, stars: [ { id: "board_bowsers_sub", name: "Board Bowser's Sub", order: 1 }, { id: "chests_in_the_current", name: "Chests in the Current", order: 2 }, { id: "pole_jumping_for_red_coins", name: "Pole-Jumping for Red Coins", order: 3 }, { id: "through_the_jet_stream_ddd", name: "Through the Jet Stream", order: 4 }, { id: "the_manta_rays_reward", name: "The Manta Ray's Reward", order: 5 }, { id: "collect_the_caps", name: "Collect the Caps", order: 6 }, { id: "ddd_100_coins", name: "DDD 100 Coins", order: 7 } ]},
+                    { id: "sl", name: "Snowman's Land", order: 10, stars: [ { id: "snowmans_big_head", name: "Snowman's Big Head", order: 1 }, { id: "chill_with_the_bully", name: "Chill with the Bully", order: 2 }, { id: "in_the_deep_freeze", name: "In the Deep Freeze", order: 3 }, { id: "whirl_from_the_freezing_pond", name: "Whirl from the Freezing Pond", order: 4 }, { id: "shell_shreddin_for_8_red_coins", name: "Shell Shreddin' for 8 Red Coins", order: 5 }, { id: "into_the_igloo", name: "Into the Igloo", order: 6 }, { id: "sl_100_coins", name: "SL 100 Coins", order: 7 } ]},
+                    { id: "wdw", name: "Wet-Dry World", order: 11, stars: [ { id: "shocking_arrow_lifts", name: "Shocking Arrow Lifts!", order: 1 }, { id: "top_o_the_town", name: "Top O' The Town", order: 2 }, { id: "secrets_in_the_shallows_and_sky", name: "Secrets in the Shallows & Sky", order: 3 }, { id: "express_elevators_hurry_up", name: "Express Elevators--Hurry Up!", order: 4 }, { id: "go_to_town_for_red_coins", name: "Go to Town for Red Coins", order: 5 }, { id: "quick_race_through_downtown", name: "Quick Race through Downtown", order: 6 }, { id: "wdw_100_coins", name: "WDW 100 Coins", order: 7 } ]},
+                    { id: "ttm", name: "Tall, Tall Mountain", order: 12, stars: [ { id: "scale_the_mountain", name: "Scale the Mountain", order: 1 }, { id: "mystery_of_the_monkey_cage", name: "Mystery of the Monkey Cage", order: 2 }, { id: "scary_shrooms_red_coins", name: "Scary 'Shrooms, Red Coins", order: 3 }, { id: "mysterious_mountainside", name: "Mysterious Mountainside", order: 4 }, { id: "breathtaking_view_from_bridge", name: "Breathtaking View from Bridge", order: 5 }, { id: "blast_to_the_lonely_mushroom", name: "Blast to the Lonely Mushroom", order: 6 }, { id: "ttm_100_coins", name: "TTM 100 Coins", order: 7 } ]},
+                    { id: "thi", name: "Tiny-Huge Island", order: 13, stars: [ { id: "pluck_the_piranha_flower", name: "Pluck the Piranha Flower", order: 1 }, { id: "the_tip_top_of_the_huge_island", name: "The Tip Top of the Huge Island", order: 2 }, { id: "rematch_with_koopa_the_quick", name: "Rematch with Koopa the Quick", order: 3 }, { id: "five_itty_bitty_secrets", name: "Five Itty Bitty Secrets", order: 4 }, { id: "wigglers_red_coins", name: "Wiggler's Red Coins", order: 5 }, { id: "make_wiggler_squirm", name: "Make Wiggler Squirm", order: 6 }, { id: "thi_100_coins", name: "THI 100 Coins", order: 7 } ]},
+                    { id: "ttc", name: "Tick Tock Clock", order: 14, stars: [ { id: "roll_into_the_cage", name: "Roll into the Cage", order: 1 }, { id: "the_pit_and_the_pendulums", name: "The Pit and the Pendulums", order: 2 }, { id: "get_a_hand", name: "Get a Hand", order: 3 }, { id: "stomp_on_the_thwomp", name: "Stomp on the Thwomp", order: 4 }, { id: "timed_jumps_on_moving_bars", name: "Timed Jumps on Moving Bars", order: 5 }, { id: "stop_time_for_red_coins", name: "Stop Time for Red Coins", order: 6 }, { id: "ttc_100_coins", name: "TTC 100 Coins", order: 7 } ]},
+                    { id: "rr", name: "Rainbow Ride", order: 15, stars: [ { id: "cruiser_crossing_the_rainbow", name: "Cruiser Crossing the Rainbow", order: 1 }, { id: "the_big_house_in_the_sky", name: "The Big House in the Sky", order: 2 }, { id: "coins_amassed_in_a_maze", name: "Coins Amassed in a Maze", order: 3 }, { id: "swingin_in_the_breeze", name: "Swingin' in the Breeze", order: 4 }, { id: "tricky_triangles", name: "Tricky Triangles!", order: 5 }, { id: "somewhere_over_the_rainbow", name: "Somewhere over the Rainbow", order: 6 }, { id: "rr_100_coins", name: "RR 100 Coins", order: 7 } ]},
+                    { id: "bowser_stages", name: "Bowser Stages", order: 16, stars: [ { id: "bowser_in_the_dark_world_no_reds", name: "Bowser in the Dark World No Reds", order: 1 }, { id: "bowser_in_the_dark_world_reds", name: "Bowser in the Dark World Reds", order: 2 }, { id: "bowser_in_the_fire_sea_no_reds", name: "Bowser in the Fire Sea No Reds", order: 3 }, { id: "bowser_in_the_fire_sea_reds", name: "Bowser in the Fire Sea Reds", order: 4 }, { id: "bowser_in_the_sky_no_reds", name: "Bowser in the Sky No Reds", order: 5 }, { id: "bowser_in_the_sky_reds", name: "Bowser in the Sky Reds", order: 6 } ]},
+                    { id: "secret_stars", name: "Castle Secret Stars", order: 17, stars: [ { id: "the_princesss_secret_slide", name: "The Princess's Secret Slide", order: 1 }, { id: "the_princesss_secret_slide_u21", name: "The Princess's Secret Slide U21", order: 2 }, { id: "the_secret_aquarium", name: "The Secret Aquarium", order: 3 }, { id: "tower_of_the_wing_cap", name: "Tower of the Wing Cap", order: 4 }, { id: "cavern_of_the_metal_cap", name: "Cavern of the Metal Cap", order: 5 }, { id: "vanish_cap_under_the_moat", name: "Vanish Cap Under the Moat", order: 6 }, { id: "wing_mario_over_the_rainbow", name: "Wing Mario Over the Rainbow", order: 7 } ]}
                 ]
             };
             
             try {
-                console.log("Starting database seed/update...");
+                console.log("Starting database seed...");
                 const batch = db.batch();
                 
-                const minigamesCollection = db.collection('minigames');
-                seedData.minigames.forEach(mg => {
-                    const docRef = minigamesCollection.doc(mg.name.toLowerCase().replace(/\s+/g, '_'));
-                    batch.set(docRef, mg, { merge: true });
-                });
-                
-                const historyCollection = db.collection('wr_history');
-                seedData.ss_wr_history.forEach(historyItem => {
-                    const docRef = historyCollection.doc(historyItem.course).collection(historyItem.star).doc();
-                    batch.set(docRef, historyItem.entry);
+                // Seed Courses and Stars structure
+                seedData.courses.forEach(course => {
+                    const courseRef = db.collection('courses').doc(course.id);
+                    batch.set(courseRef, { name: course.name, order: course.order });
+                    course.stars.forEach(star => {
+                        const starRef = courseRef.collection('stars').doc(star.id);
+                        batch.set(starRef, { name: star.name, order: star.order });
+                    });
                 });
                 
                 await batch.commit();
-                console.log("DATABASE SEEDING/UPDATE COMPLETE!");
-                alert("New data has been added/updated successfully!");
+                console.log("DATABASE SEEDING COMPLETE!");
+                alert("Database structure created successfully!");
                 window.location.reload();
             } catch (error) {
                 console.error("SEEDING FAILED:", error);
-                alert("Seeding failed. Check the console for details.");
+                alert("Seeding failed. Check the console for details. Make sure the 'courses' collection was manually deleted from Firebase first.");
             }
         }
         
