@@ -169,8 +169,11 @@
                 showModQueuePage();
             } else if (hash === '#worldrecords') {
                 showWorldRecordsPage();
-            } else if (hash === '#wrhistory') {
-                showWRHistoryPage();
+            } else if (hash.startsWith('#wrhistory')) {
+                const pathParts = hash.split('/');
+                if (pathParts.length === 1) showWRHistoryCoursesPage();
+                else if (pathParts.length === 2) showWRHistoryStarsPage(pathParts[1]);
+                else if (pathParts.length === 3) showWRHistoryLeaderboard(pathParts[1], pathParts[2]);
             } else if (hash === '#minigames') {
                 showMinigamesPage();
             } else {
@@ -397,10 +400,77 @@
             }
         }
 
-        function showWRHistoryPage() {
-            appContainer.innerHTML = `<h2>WR History</h2><p>This page is under construction.</p>`;
+        async function showWRHistoryCoursesPage() {
+            renderLoader("Loading Courses for WR History...");
+            const courses = await loadCourses();
+            appContainer.innerHTML = `
+                <h2>WR History - Select a Course</h2>
+                <div class="grid-container">
+                    ${courses.map(course => `
+                        <div class="card" onclick="window.location.hash='#wrhistory/${course.id}'">
+                            <h3>${course.name}</h3>
+                        </div>
+                    `).join('')}
+                </div>`;
         }
-        
+
+        async function showWRHistoryStarsPage(courseId) {
+            renderLoader("Loading Stars for WR History...");
+            await loadCourses();
+            const course = appState.coursesCache.find(c => c.id === courseId);
+            if (!course) { window.location.hash = '#wrhistory'; return; }
+
+            const stars = await loadStarsForCourse(courseId);
+            appContainer.innerHTML = `
+                <div class="breadcrumb"><a href="#wrhistory">WR History</a> / <span>${course.name}</span></div>
+                <h2>Select a Star to View History</h2>
+                <div class="grid-container">
+                    ${stars.map(star => `
+                        <div class="card" onclick="window.location.hash='#wrhistory/${course.id}/${star.id}'">
+                            <h3>${star.name}</h3>
+                        </div>
+                    `).join('')}
+                </div>`;
+        }
+
+        async function showWRHistoryLeaderboard(courseId, starId) {
+            renderLoader("Loading WR History...");
+            await loadCourses();
+            await loadStarsForCourse(courseId);
+            const course = appState.coursesCache.find(c => c.id === courseId);
+            const star = appState.starsCache[courseId]?.find(s => s.id === starId);
+
+            if (!course || !star) { window.location.hash = '#wrhistory'; return; }
+
+            const historyCollection = db.collection('wr_history').doc(courseId).collection(starId).orderBy('date', 'desc');
+            appState.currentListener = historyCollection.onSnapshot(snapshot => {
+                const history = snapshot.docs.map(doc => doc.data());
+                appContainer.innerHTML = `
+                    <div class="breadcrumb">
+                        <a href="#wrhistory">WR History</a> / <a href="#wrhistory/${courseId}">${course.name}</a> / <span>${star.name}</span>
+                    </div>
+                    <h2>${star.name} - WR History</h2>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Player</th><th>Time</th><th>Date</th><th>Video</th></tr></thead>
+                            <tbody>
+                                ${history.map(entry => `
+                                    <tr>
+                                        <td>${entry.player}</td>
+                                        <td>${entry.time}</td>
+                                        <td>${entry.date}</td>
+                                        <td><a href="${entry.video}" target="_blank" rel="noopener noreferrer">Link</a></td>
+                                    </tr>
+                                `).join('') || `<tr><td colspan="4">No history found for this star.</td></tr>`}
+                            </tbody>
+                        </table>
+                    </div>`;
+            }, error => {
+                console.error("Error loading WR History:", error);
+                renderError("Failed to load WR History.");
+            });
+        }
+
         async function showMinigamesPage() {
             renderLoader("Loading Minigames...");
             try {
@@ -409,19 +479,8 @@
                     renderError("No minigame data found. Please run `seedDatabase()` from the console to add it.");
                     return;
                 }
-
                 const minigames = snapshot.docs.map(doc => doc.data());
                 
-                const wrCounts = {};
-                minigames.forEach(mg => {
-                    mg.categories.forEach(cat => {
-                        if (cat.wr_holder) {
-                            wrCounts[cat.wr_holder] = (wrCounts[cat.wr_holder] || 0) + 1;
-                        }
-                    });
-                });
-                const sortedWrs = Object.entries(wrCounts).sort((a,b) => b[1] - a[1]);
-
                 let minigamesHtml = '';
                 minigames.forEach(mg => {
                     minigamesHtml += `
@@ -438,39 +497,14 @@
 
                 appContainer.innerHTML = `
                     <h2>Minigames</h2>
-                    <div style="display: flex; flex-wrap: wrap; gap: 2rem;">
-                        <div style="flex: 2; min-width: 300px;">
-                            <h3>Leaderboards</h3>
-                            <div class="table-container">
-                                <table>
-                                    <thead>
-                                        <tr><th>Category</th><th>WR Holder</th><th>Time</th></tr>
-                                    </thead>
-                                    <tbody>${minigamesHtml}</tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div style="flex: 1; min-width: 250px;">
-                            <h3>Mobile Players with Most WRs</h3>
-                             <div class="table-container">
-                                <table>
-                                    <thead>
-                                        <tr><th>#</th><th>Player</th><th>WRs</th></tr>
-                                    </thead>
-                                    <tbody>
-                                        ${sortedWrs.map(([name, count], index) => `
-                                            <tr>
-                                                <td>${index + 1}</td>
-                                                <td>${name}</td>
-                                                <td>${count}</td>
-                                            </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr><th>Category</th><th>WR Holder</th><th>Time</th></tr>
+                            </thead>
+                            <tbody>${minigamesHtml}</tbody>
+                        </table>
+                    </div>`;
             } catch (error) {
                 console.error("Error loading minigames:", error);
                 renderError("Failed to load minigame data.");
@@ -568,6 +602,7 @@
         }
 
         function parseTimeToNumeric(timeStr) {
+            if (!timeStr) return Infinity;
             if (String(timeStr).includes(':')) {
                 const parts = String(timeStr).split(':').map(Number);
                 if (parts.length === 2) return (parts[0] * 60) + parts[1];
@@ -769,42 +804,14 @@
 
             const seedData = {
                 minigames: [
-                    {
-                        name: "Princess Secret Slide",
-                        order: 1,
-                        categories: [
-                            { name: "No Restrictions", wr_holder: null, time: null },
-                            { name: "No Shortcuts", wr_holder: null, time: null },
-                            { name: "80 Coins", wr_holder: null, time: null }
-                        ]
-                    },
-                    {
-                        name: "FootRace With Koopa The quick",
-                        order: 2,
-                        categories: [
-                            { name: "No Restrictions", wr_holder: null, time: null },
-                            { name: "No BLJ", wr_holder: null, time: null },
-                            { name: "No Wing Cap", wr_holder: null, time: null },
-                            { name: "No BLJ Or Wing Cap", wr_holder: null, time: null }
-                        ]
-                    },
-                    {
-                        name: "Rematch With Koopa The Quick",
-                        order: 3,
-                        categories: [
-                            { name: "No Restrictions", wr_holder: null, time: null },
-                            { name: "No BLJ", wr_holder: null, time: null },
-                            { name: "No Shell Glitch", wr_holder: null, time: null },
-                            { name: "No Shell", wr_holder: null, time: null },
-                            { name: "No BLJ Or Shell Glitch", wr_holder: null, time: null },
-                            { name: "No BLJ Or Shell", wr_holder: null, time: null }
-                        ]
-                    }
+                    { name: "Princess Secret Slide", order: 1, categories: [ { name: "No Restrictions" }, { name: "No Shortcuts" }, { name: "80 Coins" } ] },
+                    { name: "FootRace With Koopa The quick", order: 2, categories: [ { name: "No Restrictions" }, { name: "No BLJ" }, { name: "No Wing Cap" }, { name: "No BLJ Or Wing Cap" } ] },
+                    { name: "Rematch With Koopa The Quick", order: 3, categories: [ { name: "No Restrictions" }, { name: "No BLJ" }, { name: "No Shell Glitch" }, { name: "No Shell" }, { name: "No BLJ Or Shell Glitch" }, { name: "No BLJ Or Shell" } ] }
                 ],
-                ss_runs: [
-                    { course: 'bob', star: 'footrace_with_koopa_the_quick', run: { runner: "Speedvortex", time: "1:18.88", date: "2025-08-31", videoLink: "https://youtu.be/WD3PxUUCjo" }},
-                    { course: 'ccm', star: 'lil_penguin_lost', run: { runner: "Zackajin", time: "20.03", date: "2025-08-13", videoLink: "https://youtu.be/CmmiWadG53jc?feature=shared" }},
-                    { course: 'ccm', star: 'big_penguin_race', run: { runner: "Zackajin", time: "48.96", date: "2025-08-13", videoLink: "https://youtu.be/EastsEGNSK?feature=shared" }}
+                ss_wr_history: [
+                    { course: 'bob', star: 'footrace_with_koopa_the_quick', entry: { player: "Speedvortex", time: "1:18.88", date: "2025-08-31", video: "https://youtu.be/WD3PxUUCjo" }},
+                    { course: 'ccm', star: 'lil_penguin_lost', entry: { player: "Zackajin", time: "20.03", date: "2025-08-13", video: "https://youtu.be/CmmiWadG53jc?feature=shared" }},
+                    { course: 'ccm', star: 'big_penguin_race', entry: { player: "Zackajin", time: "48.96", date: "2025-08-13", video: "https://youtu.be/EastsEGNSK?feature=shared" }}
                 ]
             };
             
@@ -818,29 +825,12 @@
                     batch.set(docRef, mg, { merge: true });
                 });
                 
-                for(const data of seedData.ss_runs) {
-                    const run = data.run;
-                    const formattedRun = {
-                        runner: run.runner,
-                        runner_normalized: run.runner.toLowerCase().trim(),
-                        igt_str: run.time,
-                        rta_str: run.time,
-                        igt_numeric: parseTimeToNumeric(run.time),
-                        date: run.date,
-                        videoLink: run.videoLink,
-                        status: 'verified'
-                    };
-                    const runsRef = db.collection('courses').doc(data.course).collection('stars').doc(data.star).collection('runs');
-                    // To avoid duplicates, we check if a run by this seed user already exists
-                    const existingSnapshot = await runsRef.where('runner_normalized', '==', formattedRun.runner_normalized).get();
-                    if (existingSnapshot.empty) {
-                        const newRunRef = runsRef.doc();
-                        batch.set(newRunRef, formattedRun);
-                    } else {
-                        console.log(`Skipping seed for ${run.runner} on ${data.star}, as a run already exists.`);
-                    }
-                }
-
+                const historyCollection = db.collection('wr_history');
+                seedData.ss_wr_history.forEach(historyItem => {
+                    const docRef = historyCollection.doc(historyItem.course).collection(historyItem.star).doc();
+                    batch.set(docRef, historyItem.entry);
+                });
+                
                 await batch.commit();
                 console.log("DATABASE SEEDING/UPDATE COMPLETE!");
                 alert("New data has been added/updated successfully!");
@@ -864,4 +854,4 @@
         });
     </script>
 </body>
-                    </html>
+</html>
