@@ -35,6 +35,11 @@
         #mod-queue-container td { vertical-align: middle; }
         .wr-list { font-size: 0.9em; color: var(--secondary-color); list-style-type: none; padding-left: 0; }
         .error-message { color: var(--rejected-color); margin-top: 1rem; display: none; }
+        
+        /* NOVO CSS PARA O FORMULÁRIO COMPACTO */
+        .form-row { display: flex; gap: 0.5rem; }
+        .form-row input { margin-top: 0.5rem; }
+        #submission-form input, #submission-form select { margin-top: 0.5rem; }
 
         @media (max-width: 600px) {
             body { padding: 0.5rem; }
@@ -61,18 +66,21 @@
     </header>
     <main id="app-container"></main>
 
+    <!-- FORMULÁRIO DE SUBMISSÃO ATUALIZADO -->
     <div id="submission-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('submission-modal')">&times;</span>
             <h2>Submit New Run</h2>
             <form id="submission-form" onsubmit="handleRunSubmission(event)">
-                <label for="course-select">Course:</label><select id="course-select" required></select>
-                <label for="star-select">Star:</label><select id="star-select" required disabled></select>
-                <label for="runner">Runner:</label><input type="text" id="runner" required>
-                <label for="igt">In-Game Time (IGT):</label><input type="text" id="igt" required placeholder="e.g., 20.03 or 1:18.88">
-                <label for="rta">Real Time (RTA):</label><input type="text" id="rta" required placeholder="e.g., 20.34 or 1:19.20">
-                <label for="date">Date:</label><input type="date" id="date" required>
-                <label for="videoLink">Video Link:</label><input type="url" id="videoLink" required>
+                <select id="course-select" required><option value="">Select a Course</option></select>
+                <select id="star-select" required disabled><option value="">Select a Star</option></select>
+                <input type="text" id="runner" required placeholder="Runner Name">
+                <div class="form-row">
+                    <input type="text" id="igt" required placeholder="In-Game Time (IGT)">
+                    <input type="text" id="rta" required placeholder="Real Time (RTA)">
+                </div>
+                <input type="date" id="date" required title="Date of the Run">
+                <input type="url" id="videoLink" required placeholder="Video Link (e.g., https://youtu.be/...)">
                 <button type="submit" id="submit-run-button">Submit Run</button>
             </form>
         </div>
@@ -274,10 +282,7 @@
         }
         
         async function showModQueuePage() {
-            if (!appState.isModerator) {
-                window.location.hash = '#home';
-                return;
-            }
+            if (!appState.isModerator) { window.location.hash = '#home'; return; }
             renderLoader("Loading Moderation Queue...");
             await loadCourses();
 
@@ -285,18 +290,11 @@
                 const pendingRunsSnapshot = await db.collectionGroup('runs').where('status', '==', 'pending').get();
                 const pendingRuns = pendingRunsSnapshot.docs.map(doc => {
                     const path = doc.ref.path.split('/');
-                    return {
-                        id: doc.id,
-                        courseId: path[1],
-                        starId: path[3],
-                        ...doc.data()
-                    };
+                    return { id: doc.id, courseId: path[1], starId: path[3], ...doc.data() };
                 });
 
                 for (const run of pendingRuns) {
-                    if (!appState.starsCache[run.courseId]) {
-                        await loadStarsForCourse(run.courseId);
-                    }
+                    if (!appState.starsCache[run.courseId]) { await loadStarsForCourse(run.courseId); }
                 }
 
                 appContainer.innerHTML = `
@@ -356,17 +354,11 @@
                         
                         const normalizedKey = originalRunnerName.toLowerCase().trim();
 
-                        if (!appState.starsCache[starInfo.courseId]) {
-                           await loadStarsForCourse(starInfo.courseId);
-                        }
+                        if (!appState.starsCache[starInfo.courseId]) { await loadStarsForCourse(starInfo.courseId); }
                         const starName = appState.starsCache[starInfo.courseId]?.find(s => s.id === starInfo.starId)?.name || starInfo.starId;
 
                         if (!wrData[normalizedKey]) {
-                            wrData[normalizedKey] = {
-                                displayName: originalRunnerName,
-                                count: 0,
-                                stars: []
-                            };
+                            wrData[normalizedKey] = { displayName: originalRunnerName, count: 0, stars: [] };
                         }
                         wrData[normalizedKey].count++;
                         wrData[normalizedKey].stars.push(starName);
@@ -391,8 +383,7 @@
                                 `).join('') || '<tr><td colspan="4">No world records found.</td></tr>'}
                             </tbody>
                         </table>
-                    </div>
-                `;
+                    </div>`;
             } catch (error) {
                 console.error("Error calculating world records:", error);
                 renderError("Failed to calculate world records. You may need to create an index. Check the console (F12) for a link.");
@@ -452,19 +443,19 @@
             const courseSelect = document.getElementById('course-select');
             const starSelect = document.getElementById('star-select');
             
-            courseSelect.innerHTML = '<option value="">-- Select a Course --</option>' + courses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-            starSelect.innerHTML = '<option value="">-- Select a Course First --</option>';
+            courseSelect.innerHTML = '<option value="">Select a Course</option>' + courses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            starSelect.innerHTML = '<option value="">Select a Star</option>';
             starSelect.disabled = true;
 
             courseSelect.onchange = async () => {
                 const courseId = courseSelect.value;
                 if (!courseId) {
-                    starSelect.innerHTML = '<option value="">-- Select a Course First --</option>';
+                    starSelect.innerHTML = '<option value="">Select a Star</option>';
                     starSelect.disabled = true;
                     return;
                 }
                 const stars = await loadStarsForCourse(courseId);
-                starSelect.innerHTML = '<option value="">-- Select a Star --</option>' + stars.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                starSelect.innerHTML = '<option value="">Select a Star</option>' + stars.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
                 starSelect.disabled = false;
             };
             
