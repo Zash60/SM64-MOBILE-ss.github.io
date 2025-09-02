@@ -25,6 +25,7 @@
         .modal-content { background-color: #2a2a2a; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; position: relative; max-height: 90vh; overflow-y: auto; }
         .close-btn { position: absolute; top: 10px; right: 15px; font-size: 1.5rem; cursor: pointer; }
         form label { display: block; margin-top: 1rem; }
+        .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
         form input, form select, form button { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background-color: #333; color: var(--text-color); box-sizing: border-box; }
         form button { background-color: var(--accent-color); font-weight: bold; cursor: pointer; }
         form button:disabled { background-color: #555; cursor: not-allowed; }
@@ -36,7 +37,6 @@
         .wr-list { font-size: 0.9em; color: var(--secondary-color); list-style-type: none; padding-left: 0; }
         .error-message { color: var(--rejected-color); margin-top: 1rem; display: none; }
         
-        /* NOVO CSS PARA O FORMULÁRIO COMPACTO */
         .form-row { display: flex; gap: 0.5rem; }
         .form-row input { margin-top: 0.5rem; }
         #submission-form input, #submission-form select { margin-top: 0.5rem; }
@@ -76,8 +76,10 @@
                 <input type="text" id="runner" required placeholder="Runner Name">
                 <div class="form-row">
                     <input type="text" id="igt" required placeholder="In-Game Time (IGT)">
-                    <input type="text" id="rta" required placeholder="Real Time (RTA)">
+                    <input type="text" id="rta" placeholder="Real Time (RTA) (Optional)">
                 </div>
+                <!-- Label adicionado mas visualmente escondido -->
+                <label for="date" class="visually-hidden">Date of the Run</label>
                 <input type="date" id="date" required title="Date of the Run">
                 <input type="url" id="videoLink" required placeholder="Video Link (e.g., https://youtu.be/...)">
                 <button type="submit" id="submit-run-button">Submit Run</button>
@@ -92,7 +94,7 @@
                 <input type="hidden" id="edit-run-id"><input type="hidden" id="edit-course-id"><input type="hidden" id="edit-star-id">
                 <label for="edit-runner">Runner:</label><input type="text" id="edit-runner" required>
                 <label for="edit-igt">In-Game Time (IGT):</label><input type="text" id="edit-igt" required>
-                <label for="edit-rta">Real Time (RTA):</label><input type="text" id="edit-rta" required>
+                <label for="edit-rta">Real Time (RTA):</label><input type="text" id="edit-rta">
                 <label for="edit-date">Date:</label><input type="date" id="edit-date" required>
                 <label for="edit-videoLink">Video Link:</label><input type="url" id="edit-videoLink" required>
                 <button type="submit" id="update-run-button">Update Run</button>
@@ -310,7 +312,7 @@
                                             <td>${run.runner}</td>
                                             <td>${course?.name || run.courseId} /<br>${star?.name || run.starId}</td>
                                             <td>${run.igt_str}</td>
-                                            <td>${run.rta_str}</td>
+                                            <td>${run.rta_str || 'N/A'}</td>
                                             <td><a href="${run.videoLink}" target="_blank">Link</a></td>
                                             <td><div class="mod-actions">
                                                 <button onclick="updateRunStatus('${run.courseId}', '${run.starId}', '${run.id}', 'verified')" title="Verify">✅</button>
@@ -510,7 +512,7 @@
                 runner: runnerName,
                 runner_normalized: runnerName.toLowerCase().trim(),
                 igt_str: igtStr,
-                rta_str: rtaStr,
+                rta_str: rtaStr || '', // Store empty string if optional field is empty
                 igt_numeric: parseTimeToNumeric(igtStr),
                 date: form.date.value,
                 videoLink: form.videoLink.value,
@@ -564,7 +566,7 @@
                 runner: runnerName,
                 runner_normalized: runnerName.toLowerCase().trim(),
                 igt_str: igtStr,
-                rta_str: rtaStr,
+                rta_str: rtaStr || '',
                 igt_numeric: parseTimeToNumeric(igtStr),
                 date: form['edit-date'].value,
                 videoLink: form['edit-videoLink'].value
@@ -651,10 +653,12 @@
 
                 snapshot.forEach(doc => {
                     const runData = doc.data();
+                    // Check for the old format (time_str exists, but igt_str does not)
                     if (runData.time_str && typeof runData.igt_str === 'undefined') {
                         const updates = {
+                            runner_normalized: runData.runner.toLowerCase().trim(),
                             igt_str: runData.time_str,
-                            rta_str: runData.time_str,
+                            rta_str: runData.time_str, // Default RTA to be the same as old time
                             igt_numeric: runData.time_numeric,
                             time_str: firebase.firestore.FieldValue.delete(),
                             time_numeric: firebase.firestore.FieldValue.delete()
