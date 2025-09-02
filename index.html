@@ -777,11 +777,16 @@
                     { id: "rr", name: "Rainbow Ride", order: 15, stars: [ { id: "cruiser_crossing_the_rainbow", name: "Cruiser Crossing the Rainbow", order: 1 }, { id: "the_big_house_in_the_sky", name: "The Big House in the Sky", order: 2 }, { id: "coins_amassed_in_a_maze", name: "Coins Amassed in a Maze", order: 3 }, { id: "swingin_in_the_breeze", name: "Swingin' in the Breeze", order: 4 }, { id: "tricky_triangles", name: "Tricky Triangles!", order: 5 }, { id: "somewhere_over_the_rainbow", name: "Somewhere over the Rainbow", order: 6 }, { id: "rr_100_coins", name: "RR 100 Coins", order: 7 } ]},
                     { id: "bowser_stages", name: "Bowser Stages", order: 16, stars: [ { id: "bowser_in_the_dark_world_no_reds", name: "Bowser in the Dark World No Reds", order: 1 }, { id: "bowser_in_the_dark_world_reds", name: "Bowser in the Dark World Reds", order: 2 }, { id: "bowser_in_the_fire_sea_no_reds", name: "Bowser in the Fire Sea No Reds", order: 3 }, { id: "bowser_in_the_fire_sea_reds", name: "Bowser in the Fire Sea Reds", order: 4 }, { id: "bowser_in_the_sky_no_reds", name: "Bowser in the Sky No Reds", order: 5 }, { id: "bowser_in_the_sky_reds", name: "Bowser in the Sky Reds", order: 6 } ]},
                     { id: "secret_stars", name: "Castle Secret Stars", order: 17, stars: [ { id: "the_princesss_secret_slide", name: "The Princess's Secret Slide", order: 1 }, { id: "the_princesss_secret_slide_u21", name: "The Princess's Secret Slide U21", order: 2 }, { id: "the_secret_aquarium", name: "The Secret Aquarium", order: 3 }, { id: "tower_of_the_wing_cap", name: "Tower of the Wing Cap", order: 4 }, { id: "cavern_of_the_metal_cap", name: "Cavern of the Metal Cap", order: 5 }, { id: "vanish_cap_under_the_moat", name: "Vanish Cap Under the Moat", order: 6 }, { id: "wing_mario_over_the_rainbow", name: "Wing Mario Over the Rainbow", order: 7 } ]}
+                ],
+                ss_wr_history: [
+                    { course: 'bob', star: 'footrace_with_koopa_the_quick', entry: { player: "Speedvortex", time: "1:18.88", date: "2025-08-31", video: "https://youtu.be/WD3PxUUCjo" }},
+                    { course: 'ccm', star: 'lil_penguin_lost', entry: { player: "Zackajin", time: "20.03", date: "2025-08-13", video: "https://youtu.be/CmmiWadG53jc?feature=shared" }},
+                    { course: 'ccm', star: 'big_penguin_race', entry: { player: "Zackajin", time: "48.96", date: "2025-08-13", video: "https://youtu.be/EastsEGNSK?feature=shared" }}
                 ]
             };
             
             try {
-                console.log("Starting database seed...");
+                console.log("Starting database seed/update...");
                 const batch = db.batch();
                 
                 // Seed Courses and Stars structure
@@ -794,13 +799,20 @@
                     });
                 });
                 
+                // Seed WR History
+                const historyCollection = db.collection('wr_history');
+                seedData.ss_wr_history.forEach(historyItem => {
+                    const docRef = historyCollection.doc(historyItem.course).collection(historyItem.star).doc();
+                    batch.set(docRef, historyItem.entry);
+                });
+
                 await batch.commit();
-                console.log("DATABASE SEEDING COMPLETE!");
-                alert("Database structure created successfully!");
+                console.log("DATABASE SEEDING/UPDATE COMPLETE!");
+                alert("New data has been added/updated successfully!");
                 window.location.reload();
             } catch (error) {
                 console.error("SEEDING FAILED:", error);
-                alert("Seeding failed. Check the console for details. Make sure the 'courses' collection was manually deleted from Firebase first.");
+                alert("Seeding failed. Check the console for details. Make sure collections were manually deleted from Firebase first if starting fresh.");
             }
         }
         
