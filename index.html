@@ -67,6 +67,7 @@
     </header>
     <main id="app-container"></main>
 
+    <!-- Modals -->
     <div id="submission-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('submission-modal')">&times;</span>
@@ -206,7 +207,7 @@
             renderLoader("Loading Courses...");
             const courses = await loadCourses();
             if (courses.length === 0) {
-                renderError('No courses found. Please run `seedDatabase()` in the console (F12) to populate data.');
+                renderError('No courses found. Run `seedDatabase()` in the console (F12) to populate the basic structure.');
                 return;
             }
             appContainer.innerHTML = `
@@ -438,9 +439,32 @@
 
             if (!course || !star) { window.location.hash = '#wrhistory'; return; }
 
-            const historyCollection = db.collection('wr_history').doc(courseId).collection(starId).orderBy('date', 'desc');
-            appState.currentListener = historyCollection.onSnapshot(snapshot => {
-                const history = snapshot.docs.map(doc => doc.data());
+            try {
+                const runsSnapshot = await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs')
+                    .where('status', '==', 'verified')
+                    .get();
+
+                const allRuns = runsSnapshot.docs.map(doc => doc.data());
+
+                const bestRunsByPlayer = {};
+                allRuns.forEach(run => {
+                    const runner = run.runner_normalized;
+                    if (!bestRunsByPlayer[runner] || run.igt_numeric < bestRunsByPlayer[runner].igt_numeric) {
+                        bestRunsByPlayer[runner] = run;
+                    }
+                });
+
+                const history = Object.values(bestRunsByPlayer).sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                let currentWR = Infinity;
+                const progression = [];
+                history.forEach(run => {
+                    if (run.igt_numeric < currentWR) {
+                        progression.push(run);
+                        currentWR = run.igt_numeric;
+                    }
+                });
+                
                 appContainer.innerHTML = `
                     <div class="breadcrumb">
                         <a href="#wrhistory">WR History</a> / <a href="#wrhistory/${courseId}">${course.name}</a> / <span>${star.name}</span>
@@ -450,21 +474,21 @@
                         <table>
                             <thead><tr><th>Player</th><th>Time</th><th>Date</th><th>Video</th></tr></thead>
                             <tbody>
-                                ${history.map(entry => `
+                                ${progression.reverse().map(entry => `
                                     <tr>
-                                        <td>${entry.player}</td>
-                                        <td>${entry.time}</td>
+                                        <td>${entry.runner}</td>
+                                        <td>${entry.igt_str}</td>
                                         <td>${entry.date}</td>
-                                        <td><a href="${entry.video}" target="_blank" rel="noopener noreferrer">Link</a></td>
+                                        <td><a href="${entry.videoLink}" target="_blank" rel="noopener noreferrer">Link</a></td>
                                     </tr>
                                 `).join('') || `<tr><td colspan="4">No history found for this star.</td></tr>`}
                             </tbody>
                         </table>
                     </div>`;
-            }, error => {
+            } catch (error) {
                 console.error("Error loading WR History:", error);
                 renderError("Failed to load WR History.");
-            });
+            }
         }
         
         // ==============================================================================
@@ -755,8 +779,8 @@
         }
         
         async function seedDatabase() {
-            console.log("This will POPULATE the database. It is critical that you MANUALLY delete old collections in the Firebase Console first for a clean seed.");
-            if (!confirm("This will add new data. Are you sure?")) return;
+            console.log("This will add/update data. It will NOT delete existing user-submitted runs.");
+            if (!confirm("This will add base data if it's missing. Are you sure?")) return;
 
             const seedData = {
                 courses: [
@@ -790,21 +814,20 @@
                 const batch = db.batch();
                 
                 // Seed Courses and Stars structure
-                seedData.courses.forEach(course => {
+                for (const course of seedData.courses) {
                     const courseRef = db.collection('courses').doc(course.id);
-                    batch.set(courseRef, { name: course.name, order: course.order });
-                    course.stars.forEach(star => {
+                    batch.set(courseRef, { name: course.name, order: course.order }, { merge: true });
+                    for (const star of course.stars) {
                         const starRef = courseRef.collection('stars').doc(star.id);
-                        batch.set(starRef, { name: star.name, order: star.order });
-                    });
-                });
-                
+                        batch.set(starRef, { name: star.name, order: star.order }, { merge: true });
+                    }
+                }
+
                 // Seed WR History
-                const historyCollection = db.collection('wr_history');
-                seedData.ss_wr_history.forEach(historyItem => {
-                    const docRef = historyCollection.doc(historyItem.course).collection(historyItem.star).doc();
+                for (const historyItem of seedData.ss_wr_history) {
+                    const docRef = db.collection('wr_history').doc(historyItem.course).collection(historyItem.star).doc();
                     batch.set(docRef, historyItem.entry);
-                });
+                }
 
                 await batch.commit();
                 console.log("DATABASE SEEDING/UPDATE COMPLETE!");
@@ -812,7 +835,7 @@
                 window.location.reload();
             } catch (error) {
                 console.error("SEEDING FAILED:", error);
-                alert("Seeding failed. Check the console for details. Make sure collections were manually deleted from Firebase first if starting fresh.");
+                alert("Seeding failed. Check the console for details.");
             }
         }
         
