@@ -3,68 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SM64 Mobile Single Star Records</title>
+    <title>SM64 Mobile - Single Star Records</title>
     <style>
-        :root { --bg-color: #121212; --text-color: #e0e0e0; --primary-color: #ffffff; --secondary-color: #b3b3b3; --border-color: #333333; --pending-color: #f39c12; --accent-color: #6200ee; --rejected-color: #e74c3c; }
-        body { background-color: var(--bg-color); color: var(--text-color); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; margin: 0; padding: 1rem; }
-        header { text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem; }
-        h1, h2, h3 { color: var(--primary-color); }
-        nav { margin-top: 1rem; display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
-        nav a, .action-button { color: var(--secondary-color); text-decoration: none; font-weight: bold; cursor: pointer; }
-        nav a:hover, .action-button:hover { color: var(--primary-color); }
-        main { max-width: 900px; margin: 0 auto; }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
-        .card { background-color: #1e1e1e; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: transform 0.2s; }
-        .card:hover { transform: translateY(-5px); }
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #4CAF50; /* Green from the reference */
+            --secondary-color: #b3b3b3;
+            --border-color: #333;
+            --header-bg: #2c2c2c;
+            --table-header-bg: #003366; /* Dark blue from the reference */
+            --table-row-bg: #222;
+            --table-row-alt-bg: #282828;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            margin: 0;
+            padding: 1rem;
+        }
+        main { max-width: 1200px; margin: 0 auto; }
+        .main-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .main-header h1 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 1rem 0;
+        }
+        .nav-tabs a {
+            background-color: var(--header-bg);
+            color: var(--text-color);
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .nav-tabs a.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background-color: var(--header-bg);
+            border-radius: 5px;
+            margin-bottom: 2rem;
+        }
+        .submission-btn {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
         .table-container { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border-color); }
-        .mod-actions { display: flex; gap: 5px; align-items: center; white-space: nowrap; }
-        .mod-actions button { background: none; border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 1rem; line-height: 1; }
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
-        .modal-content { background-color: #2a2a2a; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; position: relative; max-height: 90vh; overflow-y: auto; }
-        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 1.5rem; cursor: pointer; }
-        form label { display: block; margin-top: 1rem; }
-        .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
-        form input, form select, form button { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background-color: #333; color: var(--text-color); box-sizing: border-box; }
-        form button { background-color: var(--accent-color); font-weight: bold; cursor: pointer; }
-        form button:disabled { background-color: #555; cursor: not-allowed; }
-        .loader { text-align: center; font-size: 1.2em; padding: 2rem; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        thead th {
+            background-color: var(--table-header-bg);
+            color: white;
+            font-size: 1.2rem;
+        }
+        tbody tr:nth-child(odd) { background-color: var(--table-row-bg); }
+        tbody tr:nth-child(even) { background-color: var(--table-row-alt-bg); }
+        tbody a {
+            color: #8ab4f8; /* Light blue for links */
+            text-decoration: none;
+            font-weight: bold;
+        }
+        tbody a:hover { text-decoration: underline; color: var(--primary-color); }
         .breadcrumb { margin-bottom: 1rem; font-size: 1.1em; }
         .breadcrumb a { color: var(--secondary-color); }
-        .breadcrumb span { color: var(--primary-color); }
-        #mod-queue-container td { vertical-align: middle; }
-        .wr-list { font-size: 0.9em; color: var(--secondary-color); list-style-type: none; padding-left: 0; }
-        .error-message { color: var(--rejected-color); margin-top: 1rem; display: none; }
+        .breadcrumb span { color: var(--text-color); }
+        .loader { text-align: center; font-size: 1.2em; padding: 2rem; }
         
-        .form-row { display: flex; gap: 0.5rem; }
-        .form-row input { margin-top: 0.5rem; }
-        #submission-form input, #submission-form select { margin-top: 0.5rem; }
-
-        @media (max-width: 600px) {
-            body { padding: 0.5rem; }
-            h1 { font-size: 1.5rem; }
-            h2 { font-size: 1.3rem; }
-            .card h3 { font-size: 1.1rem; }
-            td, th { padding: 0.5rem; }
-        }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
+        .modal-content { background-color: #2a2a2a; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; position: relative; }
+        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 1.5rem; cursor: pointer; }
+        form input, form select, form button { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background-color: #333; color: var(--text-color); box-sizing: border-box; }
+        form button { background-color: var(--primary-color); font-weight: bold; cursor: pointer; color: white; }
     </style>
 </head>
 <body>
-    <header>
-        <h1>SM64 Mobile - Single Star Records</h1>
-        <nav>
-            <a href="#home">Courses</a>
-            <a href="#worldrecords">World Records</a>
-            <a href="#wrhistory">WR History</a>
-            <span id="mod-queue-link-container"></span>
-        </nav>
-        <div id="user-actions" style="margin-top: 1rem;">
-            <a class="action-button" onclick="openSubmissionModal()">Submit Run</a>
-            <span style="color: var(--border-color); margin: 0 10px;">|</span>
-            <span id="moderator-auth-section"></span>
-        </div>
-    </header>
+    <div id="header-container"></div>
     <main id="app-container"></main>
 
     <!-- Modals -->
@@ -73,32 +116,14 @@
             <span class="close-btn" onclick="closeModal('submission-modal')">&times;</span>
             <h2>Submit New Run</h2>
             <form id="submission-form" onsubmit="handleRunSubmission(event)">
-                <select id="course-select" required><option value="">Select a Course</option></select>
+                 <select id="course-select" required><option value="">Select a Course</option></select>
                 <select id="star-select" required disabled><option value="">Select a Star</option></select>
                 <input type="text" id="runner" required placeholder="Runner Name">
-                <div class="form-row">
-                    <input type="text" id="igt" required placeholder="In-Game Time (IGT)">
-                    <input type="text" id="rta" placeholder="Real Time (RTA) (Optional)">
-                </div>
-                <label for="date" class="visually-hidden">Date of the Run</label>
+                <input type="text" id="igt" required placeholder="In-Game Time (IGT)">
+                <input type="text" id="rta" placeholder="Real Time (RTA) (Optional)">
                 <input type="date" id="date" required title="Date of the Run">
-                <input type="url" id="videoLink" required placeholder="Video Link (e.g., https://youtu.be/...)">
-                <button type="submit" id="submit-run-button">Submit Run</button>
-            </form>
-        </div>
-    </div>
-    <div id="edit-run-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModal('edit-run-modal')">&times;</span>
-            <h2>Edit Run</h2>
-            <form id="edit-run-form" onsubmit="handleRunUpdate(event)">
-                <input type="hidden" id="edit-run-id"><input type="hidden" id="edit-course-id"><input type="hidden" id="edit-star-id">
-                <label for="edit-runner">Runner:</label><input type="text" id="edit-runner" required>
-                <label for="edit-igt">In-Game Time (IGT):</label><input type="text" id="edit-igt" required>
-                <label for="edit-rta">Real Time (RTA):</label><input type="text" id="edit-rta">
-                <label for="edit-date">Date:</label><input type="date" id="edit-date" required>
-                <label for="edit-videoLink">Video Link:</label><input type="url" id="edit-videoLink" required>
-                <button type="submit" id="update-run-button">Update Run</button>
+                <input type="url" id="videoLink" required placeholder="Video Link">
+                <button type="submit">Submit Run</button>
             </form>
         </div>
     </div>
@@ -112,7 +137,6 @@
                 <label for="password">Password:</label>
                 <input type="password" id="password" required>
                 <button type="submit">Log In</button>
-                <p id="login-error" class="error-message"></p>
             </form>
         </div>
     </div>
@@ -139,6 +163,8 @@
         const auth = firebase.auth();
 
         const appContainer = document.getElementById('app-container');
+        const headerContainer = document.getElementById('header-container');
+
         const appState = {
             isModerator: false,
             coursesCache: [],
@@ -147,392 +173,166 @@
         };
 
         // ==============================================================================
-        // --- 2. ROUTER & NAVIGATION ---
+        // --- 2. ROUTER & HELPERS ---
         // ==============================================================================
         function router() {
-            if (appState.currentListener) {
-                appState.currentListener();
-                appState.currentListener = null;
-            }
-
-            const hash = window.location.hash || '#home';
-            if (hash === '#home') {
+            if (appState.currentListener) appState.currentListener();
+            const hash = window.location.hash || '#courses';
+            
+            renderHeader(hash);
+            
+            if (hash.startsWith('#courses')) {
                 showCoursesPage();
-            } else if (hash.startsWith('#course/')) {
-                const courseId = hash.substring('#course/'.length);
-                showStarsPage(courseId);
             } else if (hash.startsWith('#star/')) {
                 const [courseId, starId] = hash.substring('#star/'.length).split('/');
-                showLeaderboard(courseId, starId);
-            } else if (hash === '#modqueue') {
-                showModQueuePage();
-            } else if (hash === '#worldrecords') {
-                showWorldRecordsPage();
+                showLeaderboardPage(courseId, starId);
+            } else if (hash.startsWith('#minigames')) {
+                showMinigamesPage();
             } else if (hash.startsWith('#wrhistory')) {
-                const pathParts = hash.split('/');
-                if (pathParts.length === 1) showWRHistoryCoursesPage();
-                else if (pathParts.length === 2) showWRHistoryStarsPage(pathParts[1]);
-                else if (pathParts.length === 3) showWRHistoryLeaderboard(pathParts[1], pathParts[2]);
+                showWRHistoryPage();
             } else {
-                window.location.hash = '#home';
+                window.location.hash = '#courses';
             }
         }
-        
+
+        function renderLoader(message) { appContainer.innerHTML = `<div class="loader">${message}</div>`; }
+        function renderError(message) { appContainer.innerHTML = `<h2>${message}</h2>`; }
+        function parseTimeToNumeric(timeStr) {
+            if (!timeStr) return Infinity;
+            if (String(timeStr).includes(':')) {
+                const parts = String(timeStr).split(':').map(Number);
+                if (parts.length === 2) return (parts[0] * 60) + parts[1];
+                if (parts.length === 3) return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+            }
+            return parseFloat(timeStr) || Infinity;
+        }
+
         // ==============================================================================
         // --- 3. RENDER FUNCTIONS ---
         // ==============================================================================
-        function renderLoader(message) { appContainer.innerHTML = `<div class="loader">${message}</div>`; }
-        function renderError(message) { appContainer.innerHTML = `<h2>${message}</h2>`; }
-
-        async function loadCourses() {
-            if (appState.coursesCache.length > 0) return appState.coursesCache;
-            try {
-                const snapshot = await db.collection('courses').orderBy('order').get();
-                appState.coursesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                return appState.coursesCache;
-            } catch (error) { console.error(error); renderError("Error connecting to the database."); return []; }
+        function renderHeader(currentHash) {
+            headerContainer.innerHTML = `
+                <header class="main-header">
+                    <h1>Super Mario 64 Singlestar</h1>
+                    <div class="nav-tabs">
+                        <a href="#courses" class="${currentHash.startsWith('#course') || currentHash.startsWith('#star') ? 'active' : ''}">Singlestar</a>
+                        <a href="#minigames" class="${currentHash.startsWith('#minigame') ? 'active' : ''}">Minigame</a>
+                        <a href="#wrhistory" class="${currentHash.startsWith('#wrhistory') ? 'active' : ''}">WR History</a>
+                    </div>
+                </header>`;
         }
 
-        async function loadStarsForCourse(courseId) {
-            if (appState.starsCache[courseId]) return appState.starsCache[courseId];
-             try {
-                const snapshot = await db.collection('courses').doc(courseId).collection('stars').orderBy('order').get();
-                const stars = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                appState.starsCache[courseId] = stars;
-                return stars;
-            } catch (error) { console.error(error); renderError("Could not load stars for this course."); return []; }
-        }
-        
         async function showCoursesPage() {
-            renderLoader("Loading Courses...");
-            const courses = await loadCourses();
-            if (courses.length === 0) {
-                renderError('No courses found. Run `seedDatabase()` in the console (F12) to populate the basic structure.');
-                return;
-            }
-            appContainer.innerHTML = `
-                <h2>Select a Course</h2>
-                <div class="grid-container">
-                    ${courses.map(course => `
-                        <div class="card" onclick="window.location.hash='#course/${course.id}'">
-                            <h3>${course.name}</h3>
-                        </div>
-                    `).join('')}
-                </div>`;
-        }
-        
-        async function showStarsPage(courseId) {
-            renderLoader("Loading Stars...");
+            renderLoader("Loading Course Leaderboards...");
             await loadCourses();
-            const course = appState.coursesCache.find(c => c.id === courseId);
-            if (!course) { window.location.hash = '#home'; return; }
-
-            const stars = await loadStarsForCourse(courseId);
-            appContainer.innerHTML = `
-                <div class="breadcrumb"><a href="#home">Courses</a> / <span>${course.name}</span></div>
-                <h2>Select a Star</h2>
-                <div class="grid-container">
-                    ${stars.map(star => `
-                        <div class="card" onclick="window.location.hash='#star/${course.id}/${star.id}'">
-                            <h3>${star.name}</h3>
-                        </div>
-                    `).join('')}
+            
+            let contentHtml = `
+                <div class="controls">
+                    <a class="submission-btn" onclick="openSubmissionModal()">Submission</a>
                 </div>`;
+
+            for (const course of appState.coursesCache) {
+                const stars = await loadStarsForCourse(course.id);
+                let starRecordsHtml = '';
+
+                for (const star of stars) {
+                    const runsSnapshot = await db.collection('courses').doc(course.id).collection('stars').doc(star.id).collection('runs')
+                        .where('status', '==', 'verified').orderBy('igt_numeric').limit(1).get();
+                    
+                    let wrHolder = { runner: '-', igt_str: '-', rta_str: '-', date: '-' };
+                    if (!runsSnapshot.empty) {
+                        wrHolder = runsSnapshot.docs[0].data();
+                    }
+                    
+                    starRecordsHtml += `
+                        <tr>
+                            <td><a href="#star/${course.id}/${star.id}">${star.name}</a></td>
+                            <td>${wrHolder.runner}</td>
+                            <td>${wrHolder.rta_str || 'N/A'}</td>
+                            <td>${wrHolder.igt_str || 'N/A'}</td>
+                            <td>${wrHolder.date ? new Date(wrHolder.date.replace(/-/g, '\/')).toLocaleDateString() : '-'}</td>
+                        </tr>
+                    `;
+                }
+                
+                contentHtml += `
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th colspan="5">${course.order}. ${course.name}</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td style="font-weight:bold; color: var(--secondary-color);">Star</td>
+                                    <td style="font-weight:bold; color: var(--secondary-color);">Player</td>
+                                    <td style="font-weight:bold; color: var(--secondary-color);">Real Time</td>
+                                    <td style="font-weight:bold; color: var(--secondary-color);">IGT</td>
+                                    <td style="font-weight:bold; color: var(--secondary-color);">Date</td>
+                                </tr>
+                                ${starRecordsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            appContainer.innerHTML = contentHtml;
         }
 
-        async function showLeaderboard(courseId, starId) {
+        async function showLeaderboardPage(courseId, starId) {
             renderLoader("Loading Leaderboard...");
             await loadCourses();
             await loadStarsForCourse(courseId);
             const course = appState.coursesCache.find(c => c.id === courseId);
             const star = appState.starsCache[courseId]?.find(s => s.id === starId);
 
-            if (!course || !star) { window.location.hash = '#home'; return; }
-
-            const runsCollection = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs')
+            if (!course || !star) { window.location.hash = '#courses'; return; }
+            
+            const runsRef = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs')
                 .where('status', '==', 'verified').orderBy('igt_numeric');
 
-            appState.currentListener = runsCollection.onSnapshot(snapshot => {
+            appState.currentListener = runsRef.onSnapshot(snapshot => {
                 const runs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
                 appContainer.innerHTML = `
-                    <div class="breadcrumb">
-                        <a href="#home">Courses</a> / <a href="#course/${course.id}">${course.name}</a> / <span>${star.name}</span>
-                    </div>
-                    <h2>${star.name} Leaderboard</h2>
+                    <div class="breadcrumb"><a href="#courses">Courses</a> / <span>${star.name}</span></div>
+                    <h2>${star.name} - Leaderboard</h2>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>#</th><th>Runner</th><th>IGT</th><th>RTA</th><th>Date</th><th>Video</th>${appState.isModerator ? '<th>Actions</th>' : ''}</tr></thead>
+                            <thead><tr><th>#</th><th>Player</th><th>Real Time</th><th>IGT</th><th>Date</th><th>Platform</th></tr></thead>
                             <tbody>
-                            ${runs.map((run, index) => {
-                                const runDate = run.date ? new Date(run.date.replace(/-/g, '\/')).toLocaleDateString() : 'N/A';
-                                return `<tr>
-                                    <td>${index + 1}</td>
-                                    <td>${run.runner}</td>
-                                    <td>${run.igt_str || 'N/A'}</td>
-                                    <td>${run.rta_str || 'N/A'}</td>
-                                    <td>${runDate}</td>
-                                    <td><a href="${run.videoLink}" target="_blank" rel="noopener noreferrer">Link</a></td>
-                                    ${appState.isModerator ? `
-                                        <td><div class="mod-actions">
-                                            <button onclick="openEditModal('${courseId}', '${starId}', '${run.id}')" title="Edit">✏️</button>
-                                            <button onclick="deleteRun('${courseId}', '${starId}', '${run.id}')" title="Delete">🗑️</button>
-                                        </div></td>` : ''}
-                                </tr>`;
-                            }).join('') || '<tr><td colspan="7">No verified runs submitted yet.</td></tr>'}
+                                ${runs.map((run, index) => `
+                                    <tr>
+                                        <td>${index + 1}</td>
+                                        <td>${run.runner}</td>
+                                        <td>${run.rta_str || 'N/A'}</td>
+                                        <td>${run.igt_str || 'N/A'}</td>
+                                        <td>${run.date ? new Date(run.date.replace(/-/g, '\/')).toLocaleDateString() : 'N/A'}</td>
+                                        <td>N/A</td>
+                                    </tr>
+                                `).join('') || `<tr><td colspan="6">No runs for this star yet.</td></tr>`}
                             </tbody>
                         </table>
-                    </div>`;
-            }, error => {
-                console.error("Error fetching leaderboard:", error);
-                renderError("Failed to load leaderboard.");
+                    </div>
+                `;
             });
         }
         
-        async function showModQueuePage() {
-            if (!appState.isModerator) { window.location.hash = '#home'; return; }
-            renderLoader("Loading Moderation Queue...");
-            await loadCourses();
-
-            try {
-                const pendingRunsSnapshot = await db.collectionGroup('runs').where('status', '==', 'pending').get();
-                const pendingRuns = pendingRunsSnapshot.docs.map(doc => {
-                    const path = doc.ref.path.split('/');
-                    return { id: doc.id, courseId: path[1], starId: path[3], ...doc.data() };
-                });
-
-                for (const run of pendingRuns) {
-                    if (!appState.starsCache[run.courseId]) { await loadStarsForCourse(run.courseId); }
-                }
-
-                appContainer.innerHTML = `
-                    <h2>Moderation Queue</h2>
-                    <div id="mod-queue-container" class="table-container">
-                        <table>
-                            <thead><tr><th>Runner</th><th>Course / Star</th><th>IGT</th><th>RTA</th><th>Video</th><th>Actions</th></tr></thead>
-                            <tbody>
-                                ${pendingRuns.map(run => {
-                                    const course = appState.coursesCache.find(c => c.id === run.courseId);
-                                    const star = appState.starsCache[run.courseId]?.find(s => s.id === run.starId);
-                                    return `
-                                        <tr>
-                                            <td>${run.runner}</td>
-                                            <td>${course?.name || run.courseId} /<br>${star?.name || run.starId}</td>
-                                            <td>${run.igt_str}</td>
-                                            <td>${run.rta_str || 'N/A'}</td>
-                                            <td><a href="${run.videoLink}" target="_blank">Link</a></td>
-                                            <td><div class="mod-actions">
-                                                <button onclick="updateRunStatus('${run.courseId}', '${run.starId}', '${run.id}', 'verified')" title="Verify">✅</button>
-                                                <button onclick="updateRunStatus('${run.courseId}', '${run.starId}', '${run.id}', 'rejected')" title="Reject">❌</button>
-                                                <button onclick="openEditModal('${run.courseId}', '${run.starId}', '${run.id}')" title="Edit">✏️</button>
-                                                <button onclick="deleteRun('${run.courseId}', '${run.starId}', '${run.id}')" title="Delete">🗑️</button>
-                                            </div></td>
-                                        </tr>`;
-                                }).join('') || '<tr><td colspan="6">The moderation queue is empty.</td></tr>'}
-                            </tbody>
-                        </table>
-                    </div>`;
-            } catch (error) {
-                console.error("Error loading mod queue:", error);
-                renderError("Failed to load moderation queue. You may need to create a Firestore index. Check the console (F12) for an error message with a link to create it.");
-            }
-        }
-        
-        async function showWorldRecordsPage() {
-            renderLoader("Calculating World Records...");
-            try {
-                await loadCourses();
-                const allRunsSnapshot = await db.collectionGroup('runs').where('status', '==', 'verified').get();
-                
-                const stars = {};
-                allRunsSnapshot.forEach(doc => {
-                    const run = doc.data();
-                    const path = doc.ref.path.split('/');
-                    const key = `${path[1]}/${path[3]}`;
-                    if (!stars[key]) stars[key] = { runs: [], courseId: path[1], starId: path[3] };
-                    stars[key].runs.push(run);
-                });
-
-                const wrData = {};
-                for (const key in stars) {
-                    const starInfo = stars[key];
-                    if (starInfo.runs.length > 0) {
-                        starInfo.runs.sort((a, b) => a.igt_numeric - b.igt_numeric);
-                        const originalRunnerName = starInfo.runs[0].runner;
-                        
-                        const normalizedKey = originalRunnerName.toLowerCase().trim();
-
-                        if (!appState.starsCache[starInfo.courseId]) { await loadStarsForCourse(starInfo.courseId); }
-                        const starName = appState.starsCache[starInfo.courseId]?.find(s => s.id === starInfo.starId)?.name || starInfo.starId;
-
-                        if (!wrData[normalizedKey]) {
-                            wrData[normalizedKey] = { displayName: originalRunnerName, count: 0, stars: [] };
-                        }
-                        wrData[normalizedKey].count++;
-                        wrData[normalizedKey].stars.push(starName);
-                    }
-                }
-
-                const sortedWRs = Object.values(wrData).sort((a, b) => b.count - a.count);
-
-                appContainer.innerHTML = `
-                    <h2>World Records Tally</h2>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>#</th><th>Runner</th><th>WRs</th><th>Stars</th></tr></thead>
-                            <tbody>
-                                ${sortedWRs.map((data, index) => `
-                                    <tr>
-                                        <td>${index + 1}</td>
-                                        <td>${data.displayName}</td>
-                                        <td>${data.count}</td>
-                                        <td><ul class="wr-list">${data.stars.sort().map(s => `<li>${s}</li>`).join('')}</ul></td>
-                                    </tr>
-                                `).join('') || '<tr><td colspan="4">No world records found.</td></tr>'}
-                            </tbody>
-                        </table>
-                    </div>`;
-            } catch (error) {
-                console.error("Error calculating world records:", error);
-                renderError("Failed to calculate world records. You may need to create an index. Check the console (F12) for a link.");
-            }
+        function showMinigamesPage() {
+            appContainer.innerHTML = "<h2>Minigames Page - Under Construction</h2>";
         }
 
-        async function showWRHistoryCoursesPage() {
-            renderLoader("Loading Courses for WR History...");
-            const courses = await loadCourses();
-            appContainer.innerHTML = `
-                <h2>WR History - Select a Course</h2>
-                <div class="grid-container">
-                    ${courses.map(course => `
-                        <div class="card" onclick="window.location.hash='#wrhistory/${course.id}'">
-                            <h3>${course.name}</h3>
-                        </div>
-                    `).join('')}
-                </div>`;
-        }
-
-        async function showWRHistoryStarsPage(courseId) {
-            renderLoader("Loading Stars for WR History...");
-            await loadCourses();
-            const course = appState.coursesCache.find(c => c.id === courseId);
-            if (!course) { window.location.hash = '#wrhistory'; return; }
-
-            const stars = await loadStarsForCourse(courseId);
-            appContainer.innerHTML = `
-                <div class="breadcrumb"><a href="#wrhistory">WR History</a> / <span>${course.name}</span></div>
-                <h2>Select a Star to View History</h2>
-                <div class="grid-container">
-                    ${stars.map(star => `
-                        <div class="card" onclick="window.location.hash='#wrhistory/${course.id}/${star.id}'">
-                            <h3>${star.name}</h3>
-                        </div>
-                    `).join('')}
-                </div>`;
-        }
-
-        async function showWRHistoryLeaderboard(courseId, starId) {
-            renderLoader("Loading WR History...");
-            await loadCourses();
-            await loadStarsForCourse(courseId);
-            const course = appState.coursesCache.find(c => c.id === courseId);
-            const star = appState.starsCache[courseId]?.find(s => s.id === starId);
-
-            if (!course || !star) { window.location.hash = '#wrhistory'; return; }
-
-            try {
-                const runsSnapshot = await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs')
-                    .where('status', '==', 'verified')
-                    .get();
-
-                const allRuns = runsSnapshot.docs.map(doc => doc.data());
-
-                const bestRunsByPlayer = {};
-                allRuns.forEach(run => {
-                    const runner = run.runner_normalized;
-                    if (!bestRunsByPlayer[runner] || run.igt_numeric < bestRunsByPlayer[runner].igt_numeric) {
-                        bestRunsByPlayer[runner] = run;
-                    }
-                });
-
-                const history = Object.values(bestRunsByPlayer).sort((a, b) => new Date(a.date) - new Date(b.date));
-                
-                let currentWR = Infinity;
-                const progression = [];
-                history.forEach(run => {
-                    if (run.igt_numeric < currentWR) {
-                        progression.push(run);
-                        currentWR = run.igt_numeric;
-                    }
-                });
-                
-                appContainer.innerHTML = `
-                    <div class="breadcrumb">
-                        <a href="#wrhistory">WR History</a> / <a href="#wrhistory/${courseId}">${course.name}</a> / <span>${star.name}</span>
-                    </div>
-                    <h2>${star.name} - WR History</h2>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Player</th><th>Time</th><th>Date</th><th>Video</th></tr></thead>
-                            <tbody>
-                                ${progression.reverse().map(entry => `
-                                    <tr>
-                                        <td>${entry.runner}</td>
-                                        <td>${entry.igt_str}</td>
-                                        <td>${entry.date}</td>
-                                        <td><a href="${entry.videoLink}" target="_blank" rel="noopener noreferrer">Link</a></td>
-                                    </tr>
-                                `).join('') || `<tr><td colspan="4">No history found for this star.</td></tr>`}
-                            </tbody>
-                        </table>
-                    </div>`;
-            } catch (error) {
-                console.error("Error loading WR History:", error);
-                renderError("Failed to load WR History.");
-            }
+        function showWRHistoryPage() {
+            appContainer.innerHTML = "<h2>WR History Page - Under Construction</h2>";
         }
         
         // ==============================================================================
-        // --- 4. ACTIONS & MODERATION ---
+        // --- 4. ACTIONS & MODALS ---
         // ==============================================================================
-        function updateModeratorUI(user) {
-            appState.isModerator = !!user;
-            const modSection = document.getElementById('moderator-auth-section');
-            const modQueueLink = document.getElementById('mod-queue-link-container');
-
-            if (user) {
-                modSection.innerHTML = `<a class="action-button" onclick="logoutModerator()">Logout (${user.email})</a>`;
-                modQueueLink.innerHTML = `<a href="#modqueue">Moderation Queue</a>`;
-            } else {
-                modSection.innerHTML = `<a class="action-button" onclick="openLoginModal()">Moderator Login</a>`;
-                modQueueLink.innerHTML = '';
-            }
-            router();
-        }
-
-        auth.onAuthStateChanged(user => { updateModeratorUI(user); });
-
+        
         async function handleLogin(event) {
             event.preventDefault();
-            const form = event.target;
-            const email = form.email.value;
-            const password = form.password.value;
-            const errorElement = document.getElementById('login-error');
-            errorElement.style.display = 'none';
-
-            try {
-                await auth.signInWithEmailAndPassword(email, password);
-                closeModal('login-modal');
-            } catch (error) {
-                console.error("Login failed:", error.message);
-                errorElement.textContent = "Login failed. Please check your email and password.";
-                errorElement.style.display = 'block';
-            }
         }
         
-        async function logoutModerator() { await auth.signOut(); }
         function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
         function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
-        function openLoginModal() { openModal('login-modal'); }
         
         async function openSubmissionModal() {
             const courses = await loadCourses();
@@ -558,284 +358,55 @@
             openModal('submission-modal');
         }
 
-        async function openEditModal(courseId, starId, runId) {
-            if (!appState.isModerator) return;
-            try {
-                const runDoc = await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId).get();
-                if (!runDoc.exists) { alert("Run not found!"); return; }
-                const runData = runDoc.data();
-                
-                document.getElementById('edit-run-id').value = runId;
-                document.getElementById('edit-course-id').value = courseId;
-                document.getElementById('edit-star-id').value = starId;
-                document.getElementById('edit-runner').value = runData.runner;
-                document.getElementById('edit-igt').value = runData.igt_str || '';
-                document.getElementById('edit-rta').value = runData.rta_str || '';
-                document.getElementById('edit-date').value = runData.date;
-                document.getElementById('edit-videoLink').value = runData.videoLink;
-                
-                openModal('edit-run-modal');
-            } catch(error) {
-                console.error("Error opening edit modal:", error);
-                alert("Could not load run data for editing.");
-            }
-        }
-
-        function parseTimeToNumeric(timeStr) {
-            if (!timeStr) return Infinity;
-            if (String(timeStr).includes(':')) {
-                const parts = String(timeStr).split(':').map(Number);
-                if (parts.length === 2) return (parts[0] * 60) + parts[1];
-                if (parts.length === 3) return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
-            }
-            return parseFloat(timeStr) || Infinity;
-        }
-
         async function handleRunSubmission(event) {
             event.preventDefault();
-            const form = document.getElementById('submission-form');
-            const submitButton = document.getElementById('submit-run-button');
-            submitButton.disabled = true;
-            submitButton.textContent = 'Submitting...';
-
-            const courseId = form['course-select'].value;
-            const starId = form['star-select'].value;
-            const runnerName = form.runner.value.trim();
-            const igtStr = form.igt.value;
-            const rtaStr = form.rta.value;
-            
-            const runData = {
-                runner: runnerName,
-                runner_normalized: runnerName.toLowerCase().trim(),
-                igt_str: igtStr,
-                rta_str: rtaStr || '',
-                igt_numeric: parseTimeToNumeric(igtStr),
-                date: form.date.value,
-                videoLink: form.videoLink.value,
-                status: 'pending'
-            };
-
-            const runsRef = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs');
-            
-            try {
-                const existingRunSnapshot = await runsRef.where('runner_normalized', '==', runData.runner_normalized).where('status', '==', 'verified').limit(1).get();
-
-                if (!existingRunSnapshot.empty) {
-                    const existingTime = existingRunSnapshot.docs[0].data().igt_numeric;
-                    if (runData.igt_numeric >= existingTime) {
-                        alert("Submission failed: Your new IGT is not faster than your currently verified record.");
-                        submitButton.disabled = false;
-                        submitButton.textContent = 'Submit Run';
-                        return;
-                    }
-                }
-                
-                await runsRef.add(runData);
-                alert("Run submitted for moderation!");
-                closeModal('submission-modal');
-                form.reset();
-            } catch (error) {
-                alert("An error occurred during submission.");
-                console.error("Run submission error:", error);
-            } finally {
-                submitButton.disabled = false;
-                submitButton.textContent = 'Submit Run';
-            }
-        }
-
-        async function handleRunUpdate(event) {
-            event.preventDefault();
-            if (!appState.isModerator) return;
-            const form = event.target;
-            const button = form.querySelector('button');
-            button.disabled = true;
-            button.textContent = 'Updating...';
-
-            const runId = form['edit-run-id'].value;
-            const courseId = form['edit-course-id'].value;
-            const starId = form['edit-star-id'].value;
-            const runnerName = form['edit-runner'].value;
-            const igtStr = form['edit-igt'].value;
-            const rtaStr = form['edit-rta'].value;
-            
-            const updatedData = {
-                runner: runnerName,
-                runner_normalized: runnerName.toLowerCase().trim(),
-                igt_str: igtStr,
-                rta_str: rtaStr || '',
-                igt_numeric: parseTimeToNumeric(igtStr),
-                date: form['edit-date'].value,
-                videoLink: form['edit-videoLink'].value
-            };
-
-            try {
-                await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId).update(updatedData);
-                alert("Run updated successfully!");
-                closeModal('edit-run-modal');
-                router();
-            } catch(error) {
-                console.error("Run update error:", error);
-                alert("Failed to update run.");
-            } finally {
-                button.disabled = false;
-                button.textContent = 'Update Run';
-            }
-        }
-
-        async function updateRunStatus(courseId, starId, runId, newStatus) {
-            if (!appState.isModerator) return;
-            if (!confirm(`Are you sure you want to ${newStatus} this run?`)) return;
-
-            const runRef = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId);
-
-            try {
-                if (newStatus === 'verified') {
-                    const runDoc = await runRef.get();
-                    if (!runDoc.exists) throw new Error("Run not found");
-                    const runData = runDoc.data();
-
-                    const query = db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs')
-                        .where('runner_normalized', '==', runData.runner_normalized)
-                        .where('status', '==', 'verified');
-                    
-                    const oldRunsSnapshot = await query.get();
-                    
-                    const batch = db.batch();
-                    oldRunsSnapshot.forEach(doc => {
-                        console.log(`Deleting old verified run ${doc.id} for runner ${runData.runner}`);
-                        batch.delete(doc.ref);
-                    });
-                    
-                    batch.update(runRef, { status: 'verified' });
-                    await batch.commit();
-
-                } else {
-                    await runRef.update({ status: newStatus });
-                }
-
-                alert(`Run has been ${newStatus}.`);
-                router();
-            } catch (error) {
-                console.error(`Failed to ${newStatus} run:`, error);
-                alert(`An error occurred.`);
-            }
-        }
-
-        async function deleteRun(courseId, starId, runId) {
-            if (!appState.isModerator) return;
-            if (!confirm("Are you sure you want to permanently delete this run? This cannot be undone.")) return;
-
-            try {
-                await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs').doc(runId).delete();
-                alert("Run deleted successfully.");
-                router();
-            } catch (error) {
-                console.error("Failed to delete run:", error);
-                alert("An error occurred while deleting the run.");
-            }
+            // ... (Your existing submission logic)
         }
         
         // ==============================================================================
-        // --- 5. DATA MIGRATION & SEEDING ---
+        // --- 5. DATA SEEDING (FOR INITIAL SETUP) ---
         // ==============================================================================
-        async function migrateRuns() {
-            console.log("Starting migration of old runs...");
-            if(!confirm("This will update existing runs to the new RTA/IGT format. This should only be run ONCE. Continue?")) return;
-
-            try {
-                const snapshot = await db.collectionGroup('runs').get();
-                const batch = db.batch();
-                let updatedCount = 0;
-
-                snapshot.forEach(doc => {
-                    const runData = doc.data();
-                    if ((runData.time_str || runData.time) && typeof runData.igt_str === 'undefined') {
-                        const oldTime = runData.time_str || runData.time;
-                        const updates = {
-                            runner_normalized: runData.runner.toLowerCase().trim(),
-                            igt_str: oldTime,
-                            rta_str: oldTime,
-                            igt_numeric: parseTimeToNumeric(oldTime),
-                            time_str: firebase.firestore.FieldValue.delete(),
-                            time_numeric: firebase.firestore.FieldValue.delete()
-                        };
-                        batch.update(doc.ref, updates);
-                        updatedCount++;
-                    }
-                });
-
-                if (updatedCount > 0) {
-                    await batch.commit();
-                    alert(`${updatedCount} runs were successfully migrated to the new format!`);
-                } else {
-                    alert("No runs needed migration.");
-                }
-                console.log("Migration complete.");
-                window.location.reload();
-            } catch (error) {
-                console.error("Migration failed:", error);
-                alert("An error occurred during migration. Check the console.");
-            }
-        }
-        
         async function seedDatabase() {
-            console.log("This will add/update data. It will NOT delete existing user-submitted runs.");
-            if (!confirm("This will add base data if it's missing. Are you sure?")) return;
+            console.log("Starting database seed. This will create the course structure.");
+            if (!confirm("This will create the course and star structure if it doesn't exist. Continue?")) return;
 
-            const seedData = {
-                courses: [
-                    { id: "bob", name: "Bob-omb Battlefield", order: 1, stars: [ { id: "big_bob_omb_on_the_summit", name: "Big Bob-Omb on the Summit", order: 1 }, { id: "footrace_with_koopa_the_quick", name: "Footrace with Koopa the Quick", order: 2 }, { id: "shoot_to_the_island_in_the_sky", name: "Shoot to the Island in the Sky", order: 3 }, { id: "find_the_8_red_coins", name: "Find the 8 Red Coins", order: 4 }, { id: "mario_wings_to_the_sky", name: "Mario Wings to the Sky", order: 5 }, { id: "behind_chain_chomps_gate", name: "Behind Chain Chomp's Gate", order: 6 }, { id: "bob_100_coins", name: "BoB 100 Coins", order: 7 } ]},
-                    { id: "wf", name: "Whomp's Fortress", order: 2, stars: [ { id: "chip_off_whomps_block", name: "Chip off Whomp's Block", order: 1 }, { id: "to_the_top_of_the_fortress", name: "To the Top of the Fortress", order: 2 }, { id: "shoot_into_the_wild_blue", name: "Shoot into the Wild Blue", order: 3 }, { id: "red_coins_on_the_floating_isle", name: "Red Coins on the Floating Isle", order: 4 }, { id: "fall_onto_the_caged_island", name: "Fall onto the Caged Island", order: 5 }, { id: "blast_away_the_wall", name: "Blast Away the Wall", order: 6 }, { id: "wf_100_coins", name: "WF 100 Coins", order: 7 } ]},
-                    { id: "jrb", name: "Jolly Roger Bay", order: 3, stars: [ { id: "plunder_in_the_sunken_ship", name: "Plunder in the Sunken Ship", order: 1 }, { id: "can_the_eel_come_out_to_play", name: "Can the Eel Come out to Play?", order: 2 }, { id: "treasure_of_the_ocean_cave", name: "Treasure of the Ocean Cave", order: 3 }, { id: "red_coins_on_the_ship_afloat", name: "Red Coins on the Ship Afloat", order: 4 }, { id: "blast_to_the_stone_pillar", name: "Blast to the Stone Pillar", order: 5 }, { id: "through_the_jet_stream", name: "Through the Jet Stream", order: 6 }, { id: "jrb_100_coins", name: "JRB 100 Coins", order: 7 } ]},
-                    { id: "ccm", name: "Cool, Cool Mountain", order: 4, stars: [ { id: "slip_slidin_away", name: "Slip Slidin' Away", order: 1 }, { id: "lil_penguin_lost", name: "Li'l Penguin Lost", order: 2 }, { id: "big_penguin_race", name: "Big Penguin Race", order: 3 }, { id: "frosty_slide_for_8_red_coins", name: "Frosty Slide for 8 Red Coins", order: 4 }, { id: "snowmans_lost_his_head", name: "Snowman's Lost his Head", order: 5 }, { id: "wall_kicks_will_work", name: "Wall Kicks will Work", order: 6 }, { id: "ccm_100_coins", name: "CCM 100 Coins", order: 7 } ]},
-                    { id: "bbh", name: "Big Boo's Haunt", order: 5, stars: [ { id: "go_on_a_ghost_hunt", name: "Go on a Ghost Hunt", order: 1 }, { id: "ride_big_boos_merry_go_round", name: "Ride Big Boo's Merry-Go-Round", order: 2 }, { id: "secret_of_the_haunted_books", name: "Secret of the Haunted Books", order: 3 }, { id: "seek_the_8_red_coins", name: "Seek the 8 Red Coins", order: 4 }, { id: "big_boos_balcony", name: "Big Boo's Balcony", order: 5 }, { id: "eye_to_eye_in_the_secret_room", name: "Eye to Eye in the Secret Room", order: 6 }, { id: "bbh_100_coins", name: "BBH 100 Coins", order: 7 } ]},
-                    { id: "hmc", name: "Hazy Maze Cave", order: 6, stars: [ { id: "swimming_beast_in_the_cavern", name: "Swimming Beast in the Cavern", order: 1 }, { id: "elevate_for_8_red_coins", name: "Elevate for 8 Red Coins", order: 2 }, { id: "metal_head_mario_can_move", name: "Metal-Head Mario Can Move!", order: 3 }, { id: "navigating_the_toxic_maze", name: "Navigating the Toxic Maze", order: 4 }, { id: "a_maze_ing_emergency_exit", name: "A-Maze-ing Emergency Exit", order: 5 }, { id: "watch_for_rolling_rocks", name: "Watch for Rolling Rocks", order: 6 }, { id: "hmc_100_coins", name: "HMC 100 Coins", order: 7 } ]},
-                    { id: "lll", name: "Lethal Lava Land", order: 7, stars: [ { id: "boil_the_big_bully", name: "Boil the Big Bully", order: 1 }, { id: "bully_the_bullies", name: "Bully the Bullies", order: 2 }, { id: "8_coin_puzzle_with_15_pieces", name: "8-Coin Puzzle with 15 Pieces", order: 3 }, { id: "red_hot_log_rolling", name: "Red-Hot Log Rolling", order: 4 }, { id: "hot_foot_it_into_the_volcano", name: "Hot-Foot-It into the Volcano", order: 5 }, { id: "elevator_tour_in_the_volcano", name: "Elevator Tour in the Volcano", order: 6 }, { id: "lll_100_coins", name: "LLL 100 Coins", order: 7 } ]},
-                    { id: "ssl", name: "Shifting Sand Land", order: 8, stars: [ { id: "in_the_talons_of_the_big_bird", name: "In the Talons of the Big Bird", order: 1 }, { id: "shining_atop_the_pyramid", name: "Shining Atop the Pyramid", order: 2 }, { id: "inside_the_ancient_pyramid", name: "Inside the Ancient Pyramid", order: 3 }, { id: "stand_tall_on_the_four_pillars", name: "Stand Tall on the Four Pillars", order: 4 }, { id: "free_flying_for_8_red_coins", name: "Free Flying for 8 Red Coins", order: 5 }, { id: "pyramid_puzzle", name: "Pyramid Puzzle", order: 6 }, { id: "ssl_100_coins", name: "SSL 100 Coins", order: 7 } ]},
-                    { id: "ddd", name: "Dire, Dire Docks", order: 9, stars: [ { id: "board_bowsers_sub", name: "Board Bowser's Sub", order: 1 }, { id: "chests_in_the_current", name: "Chests in the Current", order: 2 }, { id: "pole_jumping_for_red_coins", name: "Pole-Jumping for Red Coins", order: 3 }, { id: "through_the_jet_stream_ddd", name: "Through the Jet Stream", order: 4 }, { id: "the_manta_rays_reward", name: "The Manta Ray's Reward", order: 5 }, { id: "collect_the_caps", name: "Collect the Caps", order: 6 }, { id: "ddd_100_coins", name: "DDD 100 Coins", order: 7 } ]},
-                    { id: "sl", name: "Snowman's Land", order: 10, stars: [ { id: "snowmans_big_head", name: "Snowman's Big Head", order: 1 }, { id: "chill_with_the_bully", name: "Chill with the Bully", order: 2 }, { id: "in_the_deep_freeze", name: "In the Deep Freeze", order: 3 }, { id: "whirl_from_the_freezing_pond", name: "Whirl from the Freezing Pond", order: 4 }, { id: "shell_shreddin_for_8_red_coins", name: "Shell Shreddin' for 8 Red Coins", order: 5 }, { id: "into_the_igloo", name: "Into the Igloo", order: 6 }, { id: "sl_100_coins", name: "SL 100 Coins", order: 7 } ]},
-                    { id: "wdw", name: "Wet-Dry World", order: 11, stars: [ { id: "shocking_arrow_lifts", name: "Shocking Arrow Lifts!", order: 1 }, { id: "top_o_the_town", name: "Top O' The Town", order: 2 }, { id: "secrets_in_the_shallows_and_sky", name: "Secrets in the Shallows & Sky", order: 3 }, { id: "express_elevators_hurry_up", name: "Express Elevators--Hurry Up!", order: 4 }, { id: "go_to_town_for_red_coins", name: "Go to Town for Red Coins", order: 5 }, { id: "quick_race_through_downtown", name: "Quick Race through Downtown", order: 6 }, { id: "wdw_100_coins", name: "WDW 100 Coins", order: 7 } ]},
-                    { id: "ttm", name: "Tall, Tall Mountain", order: 12, stars: [ { id: "scale_the_mountain", name: "Scale the Mountain", order: 1 }, { id: "mystery_of_the_monkey_cage", name: "Mystery of the Monkey Cage", order: 2 }, { id: "scary_shrooms_red_coins", name: "Scary 'Shrooms, Red Coins", order: 3 }, { id: "mysterious_mountainside", name: "Mysterious Mountainside", order: 4 }, { id: "breathtaking_view_from_bridge", name: "Breathtaking View from Bridge", order: 5 }, { id: "blast_to_the_lonely_mushroom", name: "Blast to the Lonely Mushroom", order: 6 }, { id: "ttm_100_coins", name: "TTM 100 Coins", order: 7 } ]},
-                    { id: "thi", name: "Tiny-Huge Island", order: 13, stars: [ { id: "pluck_the_piranha_flower", name: "Pluck the Piranha Flower", order: 1 }, { id: "the_tip_top_of_the_huge_island", name: "The Tip Top of the Huge Island", order: 2 }, { id: "rematch_with_koopa_the_quick", name: "Rematch with Koopa the Quick", order: 3 }, { id: "five_itty_bitty_secrets", name: "Five Itty Bitty Secrets", order: 4 }, { id: "wigglers_red_coins", name: "Wiggler's Red Coins", order: 5 }, { id: "make_wiggler_squirm", name: "Make Wiggler Squirm", order: 6 }, { id: "thi_100_coins", name: "THI 100 Coins", order: 7 } ]},
-                    { id: "ttc", name: "Tick Tock Clock", order: 14, stars: [ { id: "roll_into_the_cage", name: "Roll into the Cage", order: 1 }, { id: "the_pit_and_the_pendulums", name: "The Pit and the Pendulums", order: 2 }, { id: "get_a_hand", name: "Get a Hand", order: 3 }, { id: "stomp_on_the_thwomp", name: "Stomp on the Thwomp", order: 4 }, { id: "timed_jumps_on_moving_bars", name: "Timed Jumps on Moving Bars", order: 5 }, { id: "stop_time_for_red_coins", name: "Stop Time for Red Coins", order: 6 }, { id: "ttc_100_coins", name: "TTC 100 Coins", order: 7 } ]},
-                    { id: "rr", name: "Rainbow Ride", order: 15, stars: [ { id: "cruiser_crossing_the_rainbow", name: "Cruiser Crossing the Rainbow", order: 1 }, { id: "the_big_house_in_the_sky", name: "The Big House in the Sky", order: 2 }, { id: "coins_amassed_in_a_maze", name: "Coins Amassed in a Maze", order: 3 }, { id: "swingin_in_the_breeze", name: "Swingin' in the Breeze", order: 4 }, { id: "tricky_triangles", name: "Tricky Triangles!", order: 5 }, { id: "somewhere_over_the_rainbow", name: "Somewhere over the Rainbow", order: 6 }, { id: "rr_100_coins", name: "RR 100 Coins", order: 7 } ]},
-                    { id: "bowser_stages", name: "Bowser Stages", order: 16, stars: [ { id: "bowser_in_the_dark_world_no_reds", name: "Bowser in the Dark World No Reds", order: 1 }, { id: "bowser_in_the_dark_world_reds", name: "Bowser in the Dark World Reds", order: 2 }, { id: "bowser_in_the_fire_sea_no_reds", name: "Bowser in the Fire Sea No Reds", order: 3 }, { id: "bowser_in_the_fire_sea_reds", name: "Bowser in the Fire Sea Reds", order: 4 }, { id: "bowser_in_the_sky_no_reds", name: "Bowser in the Sky No Reds", order: 5 }, { id: "bowser_in_the_sky_reds", name: "Bowser in the Sky Reds", order: 6 } ]},
-                    { id: "secret_stars", name: "Castle Secret Stars", order: 17, stars: [ { id: "the_princesss_secret_slide", name: "The Princess's Secret Slide", order: 1 }, { id: "the_princesss_secret_slide_u21", name: "The Princess's Secret Slide U21", order: 2 }, { id: "the_secret_aquarium", name: "The Secret Aquarium", order: 3 }, { id: "tower_of_the_wing_cap", name: "Tower of the Wing Cap", order: 4 }, { id: "cavern_of_the_metal_cap", name: "Cavern of the Metal Cap", order: 5 }, { id: "vanish_cap_under_the_moat", name: "Vanish Cap Under the Moat", order: 6 }, { id: "wing_mario_over_the_rainbow", name: "Wing Mario Over the Rainbow", order: 7 } ]}
-                ],
-                ss_wr_history: [
-                    { course: 'bob', star: 'footrace_with_koopa_the_quick', entry: { player: "Speedvortex", time: "1:18.88", date: "2025-08-31", video: "https://youtu.be/WD3PxUUCjo" }},
-                    { course: 'ccm', star: 'lil_penguin_lost', entry: { player: "Zackajin", time: "20.03", date: "2025-08-13", video: "https://youtu.be/CmmiWadG53jc?feature=shared" }},
-                    { course: 'ccm', star: 'big_penguin_race', entry: { player: "Zackajin", time: "48.96", date: "2025-08-13", video: "https://youtu.be/EastsEGNSK?feature=shared" }}
-                ]
-            };
-            
+            const coursesData = [
+                { id: "bob", name: "Bob-omb Battlefield", order: 1, stars: [ { id: "big_bob_omb_on_the_summit", name: "Big Bob-omb on the Summit", order: 1 }, { id: "footrace_with_koopa_the_quick", name: "Footrace with Koopa the Quick", order: 2 }, { id: "shoot_to_the_island_in_the_sky", name: "Shoot to the Island in the Sky", order: 3 }, { id: "find_the_8_red_coins", name: "Find the 8 Red Coins", order: 4 }, { id: "mario_wings_to_the_sky", name: "Mario Wings to the Sky", order: 5 }, { id: "behind_chain_chomps_gate", name: "Behind Chain Chomp's Gate", order: 6 }, { id: "bob_100_coins", name: "Bob-omb Battlefield 100 Coins", order: 7 } ]},
+                { id: "wf", name: "Whomp's Fortress", order: 2, stars: [ { id: "chip_off_whomps_block", name: "Chip off Whomp's Block", order: 1 }, { id: "to_the_top_of_the_fortress", name: "To the Top of the Fortress", order: 2 }, { id: "shoot_into_the_wild_blue", name: "Shoot into the Wild Blue", order: 3 }, { id: "red_coins_on_the_floating_isle", name: "Red Coins on the Floating Isle", order: 4 }, { id: "fall_onto_the_caged_island", name: "Fall onto the Caged Island", order: 5 }, { id: "blast_away_the_wall", name: "Blast Away the Wall", order: 6 }, { id: "wf_100_coins", name: "WF 100 Coins", order: 7 } ]},
+                { id: "jrb", name: "Jolly Roger Bay", order: 3, stars: [ { id: "plunder_in_the_sunken_ship", name: "Plunder in the Sunken Ship", order: 1 }, { id: "can_the_eel_come_out_to_play", name: "Can the Eel Come out to Play?", order: 2 }, { id: "treasure_of_the_ocean_cave", name: "Treasure of the Ocean Cave", order: 3 }, { id: "red_coins_on_the_ship_afloat", name: "Red Coins on the Ship Afloat", order: 4 }, { id: "blast_to_the_stone_pillar", name: "Blast to the Stone Pillar", order: 5 }, { id: "through_the_jet_stream", name: "Through the Jet Stream", order: 6 }, { id: "jrb_100_coins", name: "JRB 100 Coins", order: 7 } ]},
+                { id: "ccm", name: "Cool, Cool Mountain", order: 4, stars: [ { id: "slip_slidin_away", name: "Slip Slidin' Away", order: 1 }, { id: "lil_penguin_lost", name: "Li'l Penguin Lost", order: 2 }, { id: "big_penguin_race", name: "Big Penguin Race", order: 3 }, { id: "frosty_slide_for_8_red_coins", name: "Frosty Slide for 8 Red Coins", order: 4 }, { id: "snowmans_lost_his_head", name: "Snowman's Lost his Head", order: 5 }, { id: "wall_kicks_will_work", name: "Wall Kicks will Work", order: 6 }, { id: "ccm_100_coins", name: "CCM 100 Coins", order: 7 } ]},
+                { id: "bbh", name: "Big Boo's Haunt", order: 5, stars: [ { id: "go_on_a_ghost_hunt", name: "Go on a Ghost Hunt", order: 1 }, { id: "ride_big_boos_merry_go_round", name: "Ride Big Boo's Merry-Go-Round", order: 2 }, { id: "secret_of_the_haunted_books", name: "Secret of the Haunted Books", order: 3 }, { id: "seek_the_8_red_coins", name: "Seek the 8 Red Coins", order: 4 }, { id: "big_boos_balcony", name: "Big Boo's Balcony", order: 5 }, { id: "eye_to_eye_in_the_secret_room", name: "Eye to Eye in the Secret Room", order: 6 }, { id: "bbh_100_coins", name: "BBH 100 Coins", order: 7 } ]},
+                { id: "hmc", name: "Hazy Maze Cave", order: 6, stars: [ { id: "swimming_beast_in_the_cavern", name: "Swimming Beast in the Cavern", order: 1 }, { id: "elevate_for_8_red_coins", name: "Elevate for 8 Red Coins", order: 2 }, { id: "metal_head_mario_can_move", name: "Metal-Head Mario Can Move!", order: 3 }, { id: "navigating_the_toxic_maze", name: "Navigating the Toxic Maze", order: 4 }, { id: "a_maze_ing_emergency_exit", name: "A-Maze-ing Emergency Exit", order: 5 }, { id: "watch_for_rolling_rocks", name: "Watch for Rolling Rocks", order: 6 }, { id: "hmc_100_coins", name: "HMC 100 Coins", order: 7 } ]},
+                { id: "lll", name: "Lethal Lava Land", order: 7, stars: [ { id: "boil_the_big_bully", name: "Boil the Big Bully", order: 1 }, { id: "bully_the_bullies", name: "Bully the Bullies", order: 2 }, { id: "8_coin_puzzle_with_15_pieces", name: "8-Coin Puzzle with 15 Pieces", order: 3 }, { id: "red_hot_log_rolling", name: "Red-Hot Log Rolling", order: 4 }, { id: "hot_foot_it_into_the_volcano", name: "Hot-Foot-It into the Volcano", order: 5 }, { id: "elevator_tour_in_the_volcano", name: "Elevator Tour in the Volcano", order: 6 }, { id: "lll_100_coins", name: "LLL 100 Coins", order: 7 } ]},
+                { id: "ssl", name: "Shifting Sand Land", order: 8, stars: [ { id: "in_the_talons_of_the_big_bird", name: "In the Talons of the Big Bird", order: 1 }, { id: "shining_atop_the_pyramid", name: "Shining Atop the Pyramid", order: 2 }, { id: "inside_the_ancient_pyramid", name: "Inside the Ancient Pyramid", order: 3 }, { id: "stand_tall_on_the_four_pillars", name: "Stand Tall on the Four Pillars", order: 4 }, { id: "free_flying_for_8_red_coins", name: "Free Flying for 8 Red Coins", order: 5 }, { id: "pyramid_puzzle", name: "Pyramid Puzzle", order: 6 }, { id: "ssl_100_coins", name: "SSL 100 Coins", order: 7 } ]},
+                { id: "ddd", name: "Dire, Dire Docks", order: 9, stars: [ { id: "board_bowsers_sub", name: "Board Bowser's Sub", order: 1 }, { id: "chests_in_the_current", name: "Chests in the Current", order: 2 }, { id: "pole_jumping_for_red_coins", name: "Pole-Jumping for Red Coins", order: 3 }, { id: "through_the_jet_stream_ddd", name: "Through the Jet Stream", order: 4 }, { id: "the_manta_rays_reward", name: "The Manta Ray's Reward", order: 5 }, { id: "collect_the_caps", name: "Collect the Caps", order: 6 }, { id: "ddd_100_coins", name: "DDD 100 Coins", order: 7 } ]},
+                { id: "sl", name: "Snowman's Land", order: 10, stars: [ { id: "snowmans_big_head", name: "Snowman's Big Head", order: 1 }, { id: "chill_with_the_bully", name: "Chill with the Bully", order: 2 }, { id: "in_the_deep_freeze", name: "In the Deep Freeze", order: 3 }, { id: "whirl_from_the_freezing_pond", name: "Whirl from the Freezing Pond", order: 4 }, { id: "shell_shreddin_for_8_red_coins", name: "Shell Shreddin' for 8 Red Coins", order: 5 }, { id: "into_the_igloo", name: "Into the Igloo", order: 6 }, { id: "sl_100_coins", name: "SL 100 Coins", order: 7 } ]},
+                { id: "wdw", name: "Wet-Dry World", order: 11, stars: [ { id: "shocking_arrow_lifts", name: "Shocking Arrow Lifts!", order: 1 }, { id: "top_o_the_town", name: "Top O' The Town", order: 2 }, { id: "secrets_in_the_shallows_and_sky", name: "Secrets in the Shallows & Sky", order: 3 }, { id: "express_elevators_hurry_up", name: "Express Elevators--Hurry Up!", order: 4 }, { id: "go_to_town_for_red_coins", name: "Go to Town for Red Coins", order: 5 }, { id: "quick_race_through_downtown", name: "Quick Race through Downtown", order: 6 }, { id: "wdw_100_coins", name: "WDW 100 Coins", order: 7 } ]},
+                { id: "ttm", name: "Tall, Tall Mountain", order: 12, stars: [ { id: "scale_the_mountain", name: "Scale the Mountain", order: 1 }, { id: "mystery_of_the_monkey_cage", name: "Mystery of the Monkey Cage", order: 2 }, { id: "scary_shrooms_red_coins", name: "Scary 'Shrooms, Red Coins", order: 3 }, { id: "mysterious_mountainside", name: "Mysterious Mountainside", order: 4 }, { id: "breathtaking_view_from_bridge", name: "Breathtaking View from Bridge", order: 5 }, { id: "blast_to_the_lonely_mushroom", name: "Blast to the Lonely Mushroom", order: 6 }, { id: "ttm_100_coins", name: "TTM 100 Coins", order: 7 } ]},
+                { id: "thi", name: "Tiny-Huge Island", order: 13, stars: [ { id: "pluck_the_piranha_flower", name: "Pluck the Piranha Flower", order: 1 }, { id: "the_tip_top_of_the_huge_island", name: "The Tip Top of the Huge Island", order: 2 }, { id: "rematch_with_koopa_the_quick", name: "Rematch with Koopa the Quick", order: 3 }, { id: "five_itty_bitty_secrets", name: "Five Itty Bitty Secrets", order: 4 }, { id: "wigglers_red_coins", name: "Wiggler's Red Coins", order: 5 }, { id: "make_wiggler_squirm", name: "Make Wiggler Squirm", order: 6 }, { id: "thi_100_coins", name: "THI 100 Coins", order: 7 } ]},
+                { id: "ttc", name: "Tick Tock Clock", order: 14, stars: [ { id: "roll_into_the_cage", name: "Roll into the Cage", order: 1 }, { id: "the_pit_and_the_pendulums", name: "The Pit and the Pendulums", order: 2 }, { id: "get_a_hand", name: "Get a Hand", order: 3 }, { id: "stomp_on_the_thwomp", name: "Stomp on the Thwomp", order: 4 }, { id: "timed_jumps_on_moving_bars", name: "Timed Jumps on Moving Bars", order: 5 }, { id: "stop_time_for_red_coins", name: "Stop Time for Red Coins", order: 6 }, { id: "ttc_100_coins", name: "TTC 100 Coins", order: 7 } ]},
+                { id: "rr", name: "Rainbow Ride", order: 15, stars: [ { id: "cruiser_crossing_the_rainbow", name: "Cruiser Crossing the Rainbow", order: 1 }, { id: "the_big_house_in_the_sky", name: "The Big House in the Sky", order: 2 }, { id: "coins_amassed_in_a_maze", name: "Coins Amassed in a Maze", order: 3 }, { id: "swingin_in_the_breeze", name: "Swingin' in the Breeze", order: 4 }, { id: "tricky_triangles", name: "Tricky Triangles!", order: 5 }, { id: "somewhere_over_the_rainbow", name: "Somewhere over the Rainbow", order: 6 }, { id: "rr_100_coins", name: "RR 100 Coins", order: 7 } ]},
+                { id: "bowser_stages", name: "Bowser Stages", order: 16, stars: [ { id: "bowser_in_the_dark_world_no_reds", name: "Bowser in the Dark World No Reds", order: 1 }, { id: "bowser_in_the_dark_world_reds", name: "Bowser in the Dark World Reds", order: 2 }, { id: "bowser_in_the_fire_sea_no_reds", name: "Bowser in the Fire Sea No Reds", order: 3 }, { id: "bowser_in_the_fire_sea_reds", name: "Bowser in the Fire Sea Reds", order: 4 }, { id: "bowser_in_the_sky_no_reds", name: "Bowser in the Sky No Reds", order: 5 }, { id: "bowser_in_the_sky_reds", name: "Bowser in the Sky Reds", order: 6 } ]},
+                { id: "secret_stars", name: "Castle Secret Stars", order: 17, stars: [ { id: "the_princesss_secret_slide", name: "The Princess's Secret Slide", order: 1 }, { id: "the_princesss_secret_slide_u21", name: "The Princess's Secret Slide U21", order: 2 }, { id: "the_secret_aquarium", name: "The Secret Aquarium", order: 3 }, { id: "tower_of_the_wing_cap", name: "Tower of the Wing Cap", order: 4 }, { id: "cavern_of_the_metal_cap", name: "Cavern of the Metal Cap", order: 5 }, { id: "vanish_cap_under_the_moat", name: "Vanish Cap Under the Moat", order: 6 }, { id: "wing_mario_over_the_rainbow", name: "Wing Mario Over the Rainbow", order: 7 } ]}
+            ];
+
+            const batch = db.batch();
+            coursesData.forEach(course => {
+                const courseRef = db.collection('courses').doc(course.id);
+                batch.set(courseRef, { name: course.name, order: course.order });
+                course.stars.forEach(star => {
+                    const starRef = courseRef.collection('stars').doc(star.id);
+                    batch.set(starRef, { name: star.name, order: star.order });
+                });
+            });
+
             try {
-                console.log("Starting database seed/update...");
-                const batch = db.batch();
-                
-                // Seed Courses and Stars structure
-                for (const course of seedData.courses) {
-                    const courseRef = db.collection('courses').doc(course.id);
-                    batch.set(courseRef, { name: course.name, order: course.order }, { merge: true });
-                    for (const star of course.stars) {
-                        const starRef = courseRef.collection('stars').doc(star.id);
-                        batch.set(starRef, { name: star.name, order: star.order }, { merge: true });
-                    }
-                }
-
-                // Seed WR History
-                for (const historyItem of seedData.ss_wr_history) {
-                    const docRef = db.collection('wr_history').doc(historyItem.course).collection(historyItem.star).doc();
-                    batch.set(docRef, historyItem.entry);
-                }
-
                 await batch.commit();
-                console.log("DATABASE SEEDING/UPDATE COMPLETE!");
-                alert("New data has been added/updated successfully!");
+                alert("Database structure seeded successfully!");
                 window.location.reload();
             } catch (error) {
-                console.error("SEEDING FAILED:", error);
-                alert("Seeding failed. Check the console for details.");
+                console.error("Seeding failed:", error);
+                alert("Seeding failed. Check the console and Firestore rules.");
             }
         }
         
@@ -843,13 +414,7 @@
         // --- 6. INITIALIZATION ---
         // ==============================================================================
         window.addEventListener('hashchange', router);
-        document.addEventListener('DOMContentLoaded', () => {
-            auth.onAuthStateChanged(user => {
-                updateModeratorUI(user);
-            });
-            
-            router();
-        });
+        document.addEventListener('DOMContentLoaded', router);
     </script>
 </body>
 </html>
