@@ -446,8 +446,15 @@
 
                 const allRuns = runsSnapshot.docs.map(doc => doc.data());
 
-                // Sort all verified runs chronologically by date to build the history
-                const history = allRuns.sort((a, b) => new Date(a.date) - new Date(b.date));
+                // Sort all verified runs chronologically. If dates are the same, sort by the faster time to ensure consistency.
+                const history = allRuns.sort((a, b) => {
+                    const dateA = new Date(a.date);
+                    const dateB = new Date(b.date);
+                    if (dateA - dateB !== 0) {
+                        return dateA - dateB;
+                    }
+                    return a.igt_numeric - b.igt_numeric; // Secondary sort by time
+                });
                 
                 let currentWR = Infinity;
                 const progression = [];
@@ -732,46 +739,77 @@
         // ==============================================================================
         // --- 5. DATA MIGRATION & SEEDING ---
         // ==============================================================================
-        async function migrateRuns() {
-            console.log("Starting migration of old runs...");
-            if(!confirm("This will update existing runs to the new RTA/IGT format. This should only be run ONCE. Continue?")) return;
+        async function cleanupDuplicateRuns() {
+            if (!appState.isModerator) {
+                alert("You must be logged in as a moderator to perform this action.");
+                return;
+            }
+            if (!confirm("This will scan the entire database for duplicate verified runs by the same player on the same star and keep only the fastest one. This is a one-time cleanup. Are you sure you want to proceed?")) {
+                return;
+            }
+            
+            console.log("Starting duplicate run cleanup...");
+            renderLoader("Cleaning up duplicate runs... Check the console (F12) for progress.");
 
             try {
-                const snapshot = await db.collectionGroup('runs').get();
-                const batch = db.batch();
-                let updatedCount = 0;
-
-                snapshot.forEach(doc => {
-                    const runData = doc.data();
-                    if ((runData.time_str || runData.time) && typeof runData.igt_str === 'undefined') {
-                        const oldTime = runData.time_str || runData.time;
-                        const updates = {
-                            runner_normalized: runData.runner.toLowerCase().trim(),
-                            igt_str: oldTime,
-                            rta_str: oldTime,
-                            igt_numeric: parseTimeToNumeric(oldTime),
-                            time_str: firebase.firestore.FieldValue.delete(),
-                            time_numeric: firebase.firestore.FieldValue.delete()
-                        };
-                        batch.update(doc.ref, updates);
-                        updatedCount++;
-                    }
+                const allRunsSnapshot = await db.collectionGroup('runs').where('status', '==', 'verified').get();
+                
+                const runsByStar = {};
+                allRunsSnapshot.forEach(doc => {
+                    const run = { id: doc.id, ref: doc.ref, ...doc.data() };
+                    const path = doc.ref.path.split('/');
+                    const key = `${path[1]}/${path[3]}`; // courseId/starId
+                    if (!runsByStar[key]) runsByStar[key] = [];
+                    runsByStar[key].push(run);
                 });
 
-                if (updatedCount > 0) {
-                    await batch.commit();
-                    alert(`${updatedCount} runs were successfully migrated to the new format!`);
-                } else {
-                    alert("No runs needed migration.");
+                const batch = db.batch();
+                let deletedCount = 0;
+
+                for (const starKey in runsByStar) {
+                    const runs = runsByStar[starKey];
+                    const runsByPlayer = {};
+
+                    runs.forEach(run => {
+                        const runnerKey = run.runner_normalized;
+                        if (!runsByPlayer[runnerKey]) runsByPlayer[runnerKey] = [];
+                        runsByPlayer[runnerKey].push(run);
+                    });
+
+                    for (const runnerKey in runsByPlayer) {
+                        const playerRuns = runsByPlayer[runnerKey];
+                        if (playerRuns.length > 1) {
+                            playerRuns.sort((a, b) => a.igt_numeric - b.igt_numeric);
+                            const fastestRun = playerRuns[0];
+                            console.log(`Player ${fastestRun.runner} on ${starKey} has ${playerRuns.length} runs. Keeping fastest: ${fastestRun.igt_str} (ID: ${fastestRun.id})`);
+                            
+                            for (let i = 1; i < playerRuns.length; i++) {
+                                const runToDelete = playerRuns[i];
+                                console.log(`   -> DELETING slower run: ${runToDelete.igt_str} (ID: ${runToDelete.id})`);
+                                batch.delete(runToDelete.ref);
+                                deletedCount++;
+                            }
+                        }
+                    }
                 }
-                console.log("Migration complete.");
-                window.location.reload();
+
+                if (deletedCount > 0) {
+                    await batch.commit();
+                    alert(`Cleanup complete! ${deletedCount} duplicate runs were removed.`);
+                    console.log(`Cleanup complete! ${deletedCount} duplicate runs were removed.`);
+                } else {
+                    alert("No duplicate runs found to clean up.");
+                    console.log("No duplicate runs found.");
+                }
+
             } catch (error) {
-                console.error("Migration failed:", error);
-                alert("An error occurred during migration. Check the console.");
+                console.error("An error occurred during cleanup:", error);
+                alert("Cleanup failed. Check the console for details.");
+            } finally {
+                router();
             }
         }
-        
+
         async function seedDatabase() {
             console.log("This will add/update data. It will NOT delete existing user-submitted runs.");
             if (!confirm("This will add base data if it's missing. Are you sure?")) return;
