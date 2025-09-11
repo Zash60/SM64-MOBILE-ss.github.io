@@ -440,14 +440,14 @@
             if (!course || !star) { window.location.hash = '#wrhistory'; return; }
 
             try {
+                // CORRECTED: Fetch 'verified' AND 'obsolete' runs for a complete history.
                 const runsSnapshot = await db.collection('courses').doc(courseId).collection('stars').doc(starId).collection('runs')
-                    .where('status', '==', 'verified')
+                    .where('status', 'in', ['verified', 'obsolete'])
                     .get();
 
                 const allRuns = runsSnapshot.docs.map(doc => doc.data());
 
-                // 1. Sort all verified runs chronologically. This is the crucial first step.
-                // If dates are identical, the faster time is processed second, which is correct for progression.
+                // 1. Sort all relevant runs chronologically.
                 const sortedHistory = allRuns.sort((a, b) => {
                     const dateA = new Date(a.date);
                     const dateB = new Date(b.date);
@@ -457,8 +457,7 @@
                     return a.igt_numeric - b.igt_numeric; // Secondary sort for same-day records
                 });
                 
-                // 2. Iterate through the chronological list and build the true progression.
-                // A run is added only if it's faster than the previous record.
+                // 2. Iterate through the chronological list to build the true progression.
                 let currentWR = Infinity;
                 const progression = [];
                 sortedHistory.forEach(run => {
@@ -491,7 +490,7 @@
                     </div>`;
             } catch (error) {
                 console.error("Error loading WR History:", error);
-                renderError("Failed to load WR History.");
+                renderError("Failed to load WR History. You may need to create an index for this query. Check the console (F12).");
             }
         }
         
@@ -706,8 +705,9 @@
                     
                     const batch = db.batch();
                     oldRunsSnapshot.forEach(doc => {
-                        console.log(`Deleting old verified run ${doc.id} for runner ${runData.runner}`);
-                        batch.delete(doc.ref);
+                        // CORRECTED: Instead of deleting, mark the old run as 'obsolete'.
+                        console.log(`Marking old run ${doc.id} as obsolete for runner ${runData.runner}`);
+                        batch.update(doc.ref, { status: 'obsolete' });
                     });
                     
                     batch.update(runRef, { status: 'verified' });
@@ -742,77 +742,6 @@
         // ==============================================================================
         // --- 5. DATA MIGRATION & SEEDING ---
         // ==============================================================================
-        async function cleanupDuplicateRuns() {
-            if (!appState.isModerator) {
-                alert("You must be logged in as a moderator to perform this action.");
-                return;
-            }
-            if (!confirm("This will scan the entire database for duplicate verified runs by the same player on the same star and keep only the fastest one. This is a one-time cleanup. Are you sure you want to proceed?")) {
-                return;
-            }
-            
-            console.log("Starting duplicate run cleanup...");
-            renderLoader("Cleaning up duplicate runs... Check the console (F12) for progress.");
-
-            try {
-                const allRunsSnapshot = await db.collectionGroup('runs').where('status', '==', 'verified').get();
-                
-                const runsByStar = {};
-                allRunsSnapshot.forEach(doc => {
-                    const run = { id: doc.id, ref: doc.ref, ...doc.data() };
-                    const path = doc.ref.path.split('/');
-                    const key = `${path[1]}/${path[3]}`; // courseId/starId
-                    if (!runsByStar[key]) runsByStar[key] = [];
-                    runsByStar[key].push(run);
-                });
-
-                const batch = db.batch();
-                let deletedCount = 0;
-
-                for (const starKey in runsByStar) {
-                    const runs = runsByStar[starKey];
-                    const runsByPlayer = {};
-
-                    runs.forEach(run => {
-                        const runnerKey = run.runner_normalized;
-                        if (!runsByPlayer[runnerKey]) runsByPlayer[runnerKey] = [];
-                        runsByPlayer[runnerKey].push(run);
-                    });
-
-                    for (const runnerKey in runsByPlayer) {
-                        const playerRuns = runsByPlayer[runnerKey];
-                        if (playerRuns.length > 1) {
-                            playerRuns.sort((a, b) => a.igt_numeric - b.igt_numeric);
-                            const fastestRun = playerRuns[0];
-                            console.log(`Player ${fastestRun.runner} on ${starKey} has ${playerRuns.length} runs. Keeping fastest: ${fastestRun.igt_str} (ID: ${fastestRun.id})`);
-                            
-                            for (let i = 1; i < playerRuns.length; i++) {
-                                const runToDelete = playerRuns[i];
-                                console.log(`   -> DELETING slower run: ${runToDelete.igt_str} (ID: ${runToDelete.id})`);
-                                batch.delete(runToDelete.ref);
-                                deletedCount++;
-                            }
-                        }
-                    }
-                }
-
-                if (deletedCount > 0) {
-                    await batch.commit();
-                    alert(`Cleanup complete! ${deletedCount} duplicate runs were removed.`);
-                    console.log(`Cleanup complete! ${deletedCount} duplicate runs were removed.`);
-                } else {
-                    alert("No duplicate runs found to clean up.");
-                    console.log("No duplicate runs found.");
-                }
-
-            } catch (error) {
-                console.error("An error occurred during cleanup:", error);
-                alert("Cleanup failed. Check the console for details.");
-            } finally {
-                router();
-            }
-        }
-
         async function seedDatabase() {
             console.log("This will add/update data. It will NOT delete existing user-submitted runs.");
             if (!confirm("This will add base data if it's missing. Are you sure?")) return;
@@ -837,18 +766,12 @@
                     { id: "bowser_stages", name: "Bowser Stages", order: 16, stars: [ { id: "bowser_in_the_dark_world_no_reds", name: "Bowser in the Dark World No Reds", order: 1 }, { id: "bowser_in_the_dark_world_reds", name: "Bowser in the Dark World Reds", order: 2 }, { id: "bowser_in_the_fire_sea_no_reds", name: "Bowser in the Fire Sea No Reds", order: 3 }, { id: "bowser_in_the_fire_sea_reds", name: "Bowser in the Fire Sea Reds", order: 4 }, { id: "bowser_in_the_sky_no_reds", name: "Bowser in the Sky No Reds", order: 5 }, { id: "bowser_in_the_sky_reds", name: "Bowser in the Sky Reds", order: 6 } ]},
                     { id: "secret_stars", name: "Castle Secret Stars", order: 17, stars: [ { id: "the_princesss_secret_slide", name: "The Princess's Secret Slide", order: 1 }, { id: "the_princesss_secret_slide_u21", name: "The Princess's Secret Slide U21", order: 2 }, { id: "the_secret_aquarium", name: "The Secret Aquarium", order: 3 }, { id: "tower_of_the_wing_cap", name: "Tower of the Wing Cap", order: 4 }, { id: "cavern_of_the_metal_cap", name: "Cavern of the Metal Cap", order: 5 }, { id: "vanish_cap_under_the_moat", name: "Vanish Cap Under the Moat", order: 6 }, { id: "wing_mario_over_the_rainbow", name: "Wing Mario Over the Rainbow", order: 7 } ]}
                 ],
-                ss_wr_history: [
-                    { course: 'bob', star: 'footrace_with_koopa_the_quick', entry: { player: "Speedvortex", time: "1:18.88", date: "2025-08-31", video: "https://youtu.be/WD3PxUUCjo" }},
-                    { course: 'ccm', star: 'lil_penguin_lost', entry: { player: "Zackajin", time: "20.03", date: "2025-08-13", video: "https://youtu.be/CmmiWadG53jc?feature=shared" }},
-                    { course: 'ccm', star: 'big_penguin_race', entry: { player: "Zackajin", time: "48.96", date: "2025-08-13", video: "https://youtu.be/EastsEGNSK?feature=shared" }}
-                ]
             };
             
             try {
                 console.log("Starting database seed/update...");
                 const batch = db.batch();
                 
-                // Seed Courses and Stars structure
                 for (const course of seedData.courses) {
                     const courseRef = db.collection('courses').doc(course.id);
                     batch.set(courseRef, { name: course.name, order: course.order }, { merge: true });
@@ -856,12 +779,6 @@
                         const starRef = courseRef.collection('stars').doc(star.id);
                         batch.set(starRef, { name: star.name, order: star.order }, { merge: true });
                     }
-                }
-
-                // Seed WR History
-                for (const historyItem of seedData.ss_wr_history) {
-                    const docRef = db.collection('wr_history').doc(historyItem.course).collection(historyItem.star).doc();
-                    batch.set(docRef, historyItem.entry);
                 }
 
                 await batch.commit();
