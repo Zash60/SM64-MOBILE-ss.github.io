@@ -446,18 +446,12 @@
 
                 const allRuns = runsSnapshot.docs.map(doc => doc.data());
 
-                const bestRunsByPlayer = {};
-                allRuns.forEach(run => {
-                    const runner = run.runner_normalized;
-                    if (!bestRunsByPlayer[runner] || run.igt_numeric < bestRunsByPlayer[runner].igt_numeric) {
-                        bestRunsByPlayer[runner] = run;
-                    }
-                });
-
-                const history = Object.values(bestRunsByPlayer).sort((a, b) => new Date(a.date) - new Date(b.date));
+                // Sort all verified runs chronologically by date to build the history
+                const history = allRuns.sort((a, b) => new Date(a.date) - new Date(b.date));
                 
                 let currentWR = Infinity;
                 const progression = [];
+                // Iterate through the chronological list to find each time the record was broken
                 history.forEach(run => {
                     if (run.igt_numeric < currentWR) {
                         progression.push(run);
