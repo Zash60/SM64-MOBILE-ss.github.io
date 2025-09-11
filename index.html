@@ -446,26 +446,29 @@
 
                 const allRuns = runsSnapshot.docs.map(doc => doc.data());
 
-                // Sort all verified runs chronologically. If dates are the same, sort by the faster time to ensure consistency.
-                const history = allRuns.sort((a, b) => {
+                // 1. Sort all verified runs chronologically. This is the crucial first step.
+                // If dates are identical, the faster time is processed second, which is correct for progression.
+                const sortedHistory = allRuns.sort((a, b) => {
                     const dateA = new Date(a.date);
                     const dateB = new Date(b.date);
                     if (dateA - dateB !== 0) {
                         return dateA - dateB;
                     }
-                    return a.igt_numeric - b.igt_numeric; // Secondary sort by time
+                    return a.igt_numeric - b.igt_numeric; // Secondary sort for same-day records
                 });
                 
+                // 2. Iterate through the chronological list and build the true progression.
+                // A run is added only if it's faster than the previous record.
                 let currentWR = Infinity;
                 const progression = [];
-                // Iterate through the chronological list to find each time the record was broken
-                history.forEach(run => {
+                sortedHistory.forEach(run => {
                     if (run.igt_numeric < currentWR) {
                         progression.push(run);
                         currentWR = run.igt_numeric;
                     }
                 });
                 
+                // 3. Render the result, reversed to show newest first.
                 appContainer.innerHTML = `
                     <div class="breadcrumb">
                         <a href="#wrhistory">WR History</a> / <a href="#wrhistory/${courseId}">${course.name}</a> / <span>${star.name}</span>
