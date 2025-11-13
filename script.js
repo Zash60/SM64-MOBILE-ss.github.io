@@ -2,13 +2,10 @@
 // --- 1. IMPORTAÇÕES E CONFIGURAÇÃO INICIAL ---
 // ==============================================================================
 
-// Importa as funções necessárias dos pacotes corretos do Firebase
-import {
-    initializeApp // Apenas esta função vem do firebase-app
-} from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+// Importa as funções dos pacotes corretos do Firebase.
+// Esta seção precisa estar EXATAMENTE assim.
 
 import {
-    getFirestore, // Todas as funções do Firestore vêm daqui
     collection,
     collectionGroup,
     doc,
@@ -23,14 +20,13 @@ import {
     limit,
     onSnapshot,
     writeBatch,
-    setDoc
+    setDoc,
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
 import {
-    getAuth, // Todas as funções de Autenticação vêm daqui
     onAuthStateChanged,
     signInWithEmailAndPassword,
-    signOut
+    signOut,
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
 
