@@ -3,38 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SM64 Mobile Single Star Records</title>
+    <title>SM64 Mobile - Single Star Records</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <h1>SM64 Mobile - Single Star Records</h1>
-        <nav>
-            <a href="#home">Courses</a>
-            <a href="#worldrecords">World Records</a>
-            <a href="#wrhistory">WR History</a>
-            <span id="mod-queue-link-container"></span>
+    <header class="main-header">
+        <h1>Super Mario 64 Singlestar</h1>
+        <nav class="main-nav">
+            <a href="#home">Singlestar</a>
+            <a href="#minigames">Minigame</a>
+            <!-- Adicione outras abas aqui se necessário, como Xcam Compe -->
         </nav>
-        <div id="user-actions" style="margin-top: 1rem;">
-            <a class="action-button" onclick="openSubmissionModal()">Submit Run</a>
-            <span style="color: var(--border-color); margin: 0 10px;">|</span>
-            <span id="moderator-auth-section"></span>
-        </div>
     </header>
-    <main id="app-container"></main>
 
-    <!-- Modals -->
-    <div id="submission-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeModal('submission-modal')">&times;</span><h2>Submit New Run</h2><form id="submission-form" onsubmit="handleRunSubmission(event)"><select id="course-select" required><option value="">Select a Course</option></select><select id="star-select" required disabled><option value="">Select a Star</option></select><input type="text" id="runner" required placeholder="Runner Name"><div class="form-row"><input type="text" id="igt" required placeholder="In-Game Time (IGT)"><input type="text" id="rta" placeholder="Real Time (RTA) (Optional)"></div><label for="date" class="visually-hidden">Date of the Run</label><input type="date" id="date" required title="Date of the Run"><input type="url" id="videoLink" required placeholder="Video Link (e.g., https://youtu.be/...)"><button type="submit" id="submit-run-button">Submit Run</button></form></div></div>
-    <div id="edit-run-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeModal('edit-run-modal')">&times;</span><h2>Edit Run</h2><form id="edit-run-form" onsubmit="handleRunUpdate(event)"><input type="hidden" id="edit-run-id"><input type="hidden" id="edit-course-id"><input type="hidden" id="edit-star-id"><label for="edit-runner">Runner:</label><input type="text" id="edit-runner" required><label for="edit-igt">In-Game Time (IGT):</label><input type="text" id="edit-igt" required><label for="edit-rta">Real Time (RTA):</label><input type="text" id="edit-rta"><label for="edit-date">Date:</label><input type="date" id="edit-date" required><label for="edit-videoLink">Video Link:</label><input type="url" id="edit-videoLink" required><button type="submit" id="update-run-button">Update Run</button></form></div></div>
-    <div id="login-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeModal('login-modal')">&times;</span><h2>Moderator Login</h2><form id="login-form" onsubmit="handleLogin(event)"><label for="email">Email:</label><input type="email" id="email" required><label for="password">Password:</label><input type="password" id="password" required><button type="submit">Log In</button><p id="login-error" class="error-message"></p></form></div></div>
+    <main id="app-container">
+        <!-- O conteúdo será renderizado aqui pelo script.js -->
+    </main>
 
-    <!-- Firebase SDK - Abordagem Padrão -->
+    <footer>
+        <div class="user-actions" id="user-actions-container">
+            <!-- Autenticação e Submissão serão gerenciadas aqui -->
+        </div>
+    </footer>
+    
+    <!-- Modals (a estrutura permanece a mesma, mas serão controlados pelo novo script) -->
+    
+    <!-- Firebase SDK (não precisa mudar) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-        
-        // Importa a configuração de um arquivo que será gerado pelo GitHub Actions
         import { firebaseConfig } from './firebase-config.js';
         
         const app = initializeApp(firebaseConfig);
