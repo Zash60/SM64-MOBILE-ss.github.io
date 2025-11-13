@@ -22,21 +22,25 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      # 1. Pega o código do seu repositório (index.html, style.css, script.js)
+      # 1. Pega o código do seu repositório
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Cria o arquivo firebase-config.js usando o segredo
-      #    O segredo FIREBASE_CONFIG deve conter o 'export const...'
+      # 2. Cria o arquivo firebase-config.js de forma robusta
+      #    Esta abordagem com 'cat << EOF' preserva a formatação original do segredo.
       - name: Create Firebase Config File
-        run: echo "${{ secrets.FIREBASE_CONFIG }}" > firebase-config.js
+        run: |
+          cat <<EOF > firebase-config.js
+          ${{ secrets.FIREBASE_CONFIG }}
+          EOF
+        # O workflow pegará o conteúdo do segredo e o colocará aqui,
+        # exatamente como ele está, com todas as linhas e espaços.
 
       # 3. Configura o GitHub Pages
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
       # 4. Faz o upload de TODOS os arquivos para o artefato do site
-      #    (Isso agora incluirá o firebase-config.js gerado)
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
