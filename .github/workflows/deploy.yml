@@ -26,20 +26,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Prepara o script de configuração do Firebase
-      - name: Prepare Firebase Config Script
+      # 2. Cria um arquivo temporário com o script de configuração
+      #    Esta abordagem é mais robusta para strings multilinha.
+      - name: Create Firebase Config Script File
         run: |
-          # Cria uma string com o conteúdo do script
-          CONFIG_SCRIPT="<script>const firebaseConfig = ${{ secrets.FIREBASE_CONFIG_JSON }};<\/script>"
-          # Salva essa string em uma variável de ambiente do workflow
-          echo "CONFIG_SCRIPT=$CONFIG_SCRIPT" >> $GITHUB_ENV
+          echo '<script>' > config.js
+          echo 'const firebaseConfig = ${{ secrets.FIREBASE_CONFIG_JSON }};' >> config.js
+          echo '</script>' >> config.js
 
-      # 3. Injeta o script de configuração no lugar do comentário no index.html
+      # 3. Injeta o script de configuração no index.html
+      #    Ele lê o arquivo 'config.js' e o coloca no lugar do comentário.
       - name: Inject Firebase Config into HTML
         run: |
-          # Usa 'sed' para encontrar o comentário e substituí-lo pelo script
-          # O uso de '|' como delimitador evita problemas com '/' no script
-          sed -i 's|<!-- Este comentário será substituído pelo workflow -->|${{ env.CONFIG_SCRIPT }}|' index.html
+          # A flag -i edita o arquivo no local.
+          # A flag -r lê o conteúdo de 'config.js'.
+          # A flag -e executa o comando.
+          # 's|placeholder|conteúdo|' substitui o placeholder pelo conteúdo.
+          sed -i -e '/<!-- Este comentário será substituído pelo workflow -->/r config.js' -e '/<!-- Este comentário será substituído pelo workflow -->/d' index.html
 
       # 4. Configura o GitHub Pages
       - name: Setup Pages
