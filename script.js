@@ -2,33 +2,15 @@
 // --- 1. IMPORTAÇÕES E CONFIGURAÇÃO INICIAL ---
 // ==============================================================================
 
-// Importa as funções dos pacotes corretos do Firebase.
-// Esta seção precisa estar EXATAMENTE assim.
-
+// Importa as funções dos pacotes CORRETOS do Firebase.
 import {
-    collection,
-    collectionGroup,
-    doc,
-    getDoc,
-    getDocs,
-    addDoc,
-    updateDoc,
-    deleteDoc,
-    query,
-    where,
-    orderBy,
-    limit,
-    onSnapshot,
-    writeBatch,
-    setDoc,
+    collection, collectionGroup, doc, getDoc, getDocs, addDoc, updateDoc,
+    deleteDoc, query, where, orderBy, limit, onSnapshot, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
 import {
-    onAuthStateChanged,
-    signInWithEmailAndPassword,
-    signOut,
+    onAuthStateChanged, signInWithEmailAndPassword, signOut
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-
 
 // O 'db' e o 'auth' são inicializados no index.html e colocados no objeto 'window'
 // para que este script possa acessá-los.
@@ -369,6 +351,7 @@ async function showWRHistoryLeaderboard(courseId, starId) {
             }
         });
         
+        // *** INÍCIO DA CORREÇÃO ***
         appContainer.innerHTML = `
             <div class="breadcrumb">
                 <a href="#wrhistory">WR History</a> / <a href="#wrhistory/${courseId}">${course.name}</a> / <span>${star.name}</span>
@@ -376,19 +359,22 @@ async function showWRHistoryLeaderboard(courseId, starId) {
             <h2>${star.name} - WR History</h2>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>Player</th><th>Time</th><th>Date</th><th>Video</th></tr></thead>
+                    <thead><tr><th>Player</th><th>IGT</th><th>RTA</th><th>Date</th><th>Video</th></tr></thead>
                     <tbody>
                         ${progression.reverse().map(entry => `
                             <tr>
                                 <td>${entry.runner}</td>
                                 <td>${entry.igt_str}</td>
+                                <td>${entry.rta_str || 'N/A'}</td>
                                 <td>${entry.date}</td>
                                 <td><a href="${entry.videoLink}" target="_blank" rel="noopener noreferrer">Link</a></td>
                             </tr>
-                        `).join('') || `<tr><td colspan="4">No history found for this star.</td></tr>`}
+                        `).join('') || `<tr><td colspan="5">No history found for this star.</td></tr>`}
                     </tbody>
                 </table>
             </div>`;
+        // *** FIM DA CORREÇÃO ***
+
     } catch (error) {
         console.error("Error loading WR History:", error);
         renderError("Failed to load WR History. Check console (F12) for an index creation link.");
