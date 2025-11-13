@@ -2,8 +2,13 @@
 // --- 1. IMPORTAÇÕES E CONFIGURAÇÃO INICIAL ---
 // ==============================================================================
 
-// Importa as funções necessárias do Firebase SDK v9 (sintaxe moderna)
+// Importa as funções necessárias dos pacotes corretos do Firebase
 import {
+    initializeApp // Apenas esta função vem do firebase-app
+} from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+
+import {
+    getFirestore, // Todas as funções do Firestore vêm daqui
     collection,
     collectionGroup,
     doc,
@@ -18,13 +23,16 @@ import {
     limit,
     onSnapshot,
     writeBatch,
-    setDoc,
-} from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    setDoc
+} from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
 import {
+    getAuth, // Todas as funções de Autenticação vêm daqui
     onAuthStateChanged,
     signInWithEmailAndPassword,
-    signOut,
+    signOut
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
 
 // O 'db' e o 'auth' são inicializados no index.html e colocados no objeto 'window'
 // para que este script possa acessá-los.
