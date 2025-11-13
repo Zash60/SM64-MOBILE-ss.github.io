@@ -1,0 +1,147 @@
+name: Deploy Website From Single Workflow
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Cria um diretório para o site que será publicado
+      - name: Create Deploy Directory
+        run: mkdir -p deploy
+
+      # 2. Cria o arquivo firebase-config.js a partir do segredo
+      - name: Create Firebase Config
+        run: echo "${{ secrets.FIREBASE_CONFIG }}" > deploy/firebase-config.js
+
+      # 3. Cria o arquivo index.html
+      - name: Create index.html
+        run: |
+          cat << 'EOF' > deploy/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>SM64 Mobile Single Star Records</title>
+              <link rel="stylesheet" href="style.css">
+          </head>
+          <body>
+              <header>
+                  <h1>SM64 Mobile - Single Star Records</h1>
+                  <nav>
+                      <a href="#home">Courses</a>
+                      <a href="#worldrecords">World Records</a>
+                      <a href="#wrhistory">WR History</a>
+                      <span id="mod-queue-link-container"></span>
+                  </nav>
+                  <div id="user-actions" style="margin-top: 1rem;">
+                      <a class="action-button" onclick="openSubmissionModal()">Submit Run</a>
+                      <span style="color: var(--border-color); margin: 0 10px;">|</span>
+                      <span id="moderator-auth-section"></span>
+                  </div>
+              </header>
+              <main id="app-container"></main>
+          
+              <!-- Modals -->
+              <div id="submission-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeModal('submission-modal')">&times;</span><h2>Submit New Run</h2><form id="submission-form" onsubmit="handleRunSubmission(event)"></form></div></div>
+              <div id="edit-run-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeModal('edit-run-modal')">&times;</span><h2>Edit Run</h2><form id="edit-run-form" onsubmit="handleRunUpdate(event)"></form></div></div>
+              <div id="login-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeModal('login-modal')">&times;</span><h2>Moderator Login</h2><form id="login-form" onsubmit="handleLogin(event)"></form></div></div>
+          
+              <!-- Firebase SDK -->
+              <script type="module">
+                  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+                  import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+                  import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+                  import { firebaseConfig } from './firebase-config.js';
+                  const app = initializeApp(firebaseConfig);
+                  window.db = getFirestore(app);
+                  window.auth = getAuth(app);
+              </script>
+              
+              <!-- Main App Script -->
+              <script src="script.js" type="module"></script>
+          </body>
+          </html>
+          EOF
+
+      # 4. Cria o arquivo style.css
+      - name: Create style.css
+        run: |
+          cat << 'EOF' > deploy/style.css
+          :root { --bg-color: #121212; --text-color: #e0e0e0; --primary-color: #ffffff; --secondary-color: #b3b3b3; --border-color: #333333; --pending-color: #f39c12; --accent-color: #6200ee; --rejected-color: #e74c3c; }
+          body { background-color: var(--bg-color); color: var(--text-color); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; margin: 0; padding: 1rem; }
+          header { text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem; }
+          h1, h2, h3 { color: var(--primary-color); }
+          nav { margin-top: 1rem; display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+          nav a, .action-button { color: var(--secondary-color); text-decoration: none; font-weight: bold; cursor: pointer; }
+          nav a:hover, .action-button:hover { color: var(--primary-color); }
+          main { max-width: 900px; margin: 0 auto; }
+          .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+          .card { background-color: #1e1e1e; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: transform 0.2s; }
+          .card:hover { transform: translateY(-5px); }
+          .table-container { overflow-x: auto; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+          .mod-actions { display: flex; gap: 5px; align-items: center; white-space: nowrap; }
+          .mod-actions button { background: none; border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 1rem; line-height: 1; }
+          .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
+          .modal-content { background-color: #2a2a2a; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; position: relative; max-height: 90vh; overflow-y: auto; }
+          .close-btn { position: absolute; top: 10px; right: 15px; font-size: 1.5rem; cursor: pointer; }
+          form label { display: block; margin-top: 1rem; }
+          .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+          form input, form select, form button { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background-color: #333; color: var(--text-color); box-sizing: border-box; }
+          form button { background-color: var(--accent-color); font-weight: bold; cursor: pointer; }
+          form button:disabled { background-color: #555; cursor: not-allowed; }
+          .loader { text-align: center; font-size: 1.2em; padding: 2rem; }
+          .breadcrumb { margin-bottom: 1rem; font-size: 1.1em; }
+          .breadcrumb a { color: var(--secondary-color); }
+          .breadcrumb span { color: var(--primary-color); }
+          #mod-queue-container td { vertical-align: middle; }
+          .wr-list { font-size: 0.9em; color: var(--secondary-color); list-style-type: none; padding-left: 0; }
+          .error-message { color: var(--rejected-color); margin-top: 1rem; display: none; }
+          .form-row { display: flex; gap: 0.5rem; }
+          .form-row input { margin-top: 0.5rem; }
+          #submission-form input, #submission-form select { margin-top: 0.5rem; }
+          @media (max-width: 600px) { body { padding: 0.5rem; } h1 { font-size: 1.5rem; } h2 { font-size: 1.3rem; } .card h3 { font-size: 1.1rem; } td, th { padding: 0.5rem; } }
+          EOF
+
+      # 5. Cria o arquivo script.js
+      - name: Create script.js
+        run: |
+          # Use 'EOF_JS' para evitar conflitos com o EOF principal.
+          # O código JS foi minificado para caber melhor no YAML.
+          cat << 'EOF_JS' > deploy/script.js
+          import {collection as t,collectionGroup as e,doc as n,getDocs as o,query as i,orderBy as s,where as r,onSnapshot as a,addDoc as d,getDoc as c,updateDoc as l,deleteDoc as u,writeBatch as m,setDoc as p}from"https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";import {onAuthStateChanged as f,signInWithEmailAndPassword as g,signOut as h}from"https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";const{db:b,auth:w}=window,v=document.getElementById("app-container"),y={isModerator:!1,coursesCache:[],starsCache:{},currentListener:null};function S(){y.currentListener&&(y.currentListener(),y.currentListener=null);const t=window.location.hash||"#home";"#home"===t?k():t.startsWith("#course/")?A(t.substring("#course/".length)):t.startsWith("#star/")?(({courseId:t,starId:e})=>{const n=t,o=e;L(n,o)})(...t.substring("#star/".length).split("/").map((t,e)=>({courseId:0===e?t:void 0,starId:1===e?t:void 0}))):"#modqueue"===t?B():"#worldrecords"===t?P():t.startsWith("#wrhistory")?(()=>{const e=t.split("/");1===e.length?q():2===e.length?C(e[1]):3===e.length&&R(e[1],e[2])})():window.location.hash="#home"}function E(t){v.innerHTML=`<div class="loader">${t}</div>`}function T(t){v.innerHTML=`<h2>${t}</h2>`}async function D(){if(y.coursesCache.length>0)return y.coursesCache;try{const e=i(t(b,"courses"),s("order")),n=await o(e);return y.coursesCache=n.docs.map(t=>({id:t.id,...t.data()})),y.coursesCache}catch(t){return console.error(t),T("Error connecting to database."),[]}}async function F(e){if(y.starsCache[e])return y.starsCache[e];try{const n=i(t(b,"courses",e,"stars"),s("order")),r=await o(n);return y.starsCache[e]=r.docs.map(t=>({id:t.id,...t.data()})),y.starsCache[e]}catch(t){return console.error(t),T("Could not load stars."),[]}}async function k(){E("Loading Courses...");const t=await D();v.innerHTML=`<h2>Select a Course</h2><div class="grid-container">${t.map(t=>`<div class="card" onclick="window.location.hash='#course/${t.id}'"><h3>${t.name}</h3></div>`).join("")}</div>`}async function A(t){E("Loading Stars...");await D();const e=y.coursesCache.find(e=>e.id===t);if(!e)return void(window.location.hash="#home");const n=await F(t);v.innerHTML=`<div class="breadcrumb"><a href="#home">Courses</a> / <span>${e.name}</span></div><h2>Select a Star</h2><div class="grid-container">${n.map(e=>`<div class="card" onclick="window.location.hash='#star/${t}/${e.id}'"><h3>${e.name}</h3></div>`).join("")}</div>`}async function L(e,d){E("Loading Leaderboard...");await D(),await F(e);const c=y.coursesCache.find(t=>t.id===e),l=y.starsCache[e]?.find(t=>t.id===d);if(!c||!l)return void(window.location.hash="#home");const u=i(t(b,"courses",e,"stars",d,"runs"),r("status","==","verified"),s("igt_numeric"));y.currentListener=a(u,(t=>{const i=t.docs.map(t=>({id:t.id,...t.data()}));v.innerHTML=`\n            <div class="breadcrumb">\n                <a href="#home">Courses</a> / <a href="#course/${e}">${c.name}</a> / <span>${l.name}</span>\n            </div>\n            <h2>${l.name} Leaderboard</h2>\n            <div class="table-container">\n                <table>\n                    <thead><tr><th>#</th><th>Runner</th><th>IGT</th><th>RTA</th><th>Date</th><th>Video</th>${y.isModerator?"<th>Actions</th>":""}</tr></thead>\n                    <tbody>\n                    ${i.map(((t,i)=>{const s=t.date?new Date(t.date.replace(/-/g,"/")).toLocaleDateString():"N/A";return`<tr>\n                            <td>${i+1}</td>\n                            <td>${t.runner}</td>\n                            <td>${t.igt_str||"N/A"}</td>\n                            <td>${t.rta_str||"N/A"}</td>\n                            <td>${s}</td>\n                            <td><a href="${t.videoLink}" target="_blank" rel="noopener noreferrer">Link</a></td>\n                            ${y.isModerator?`\n                                <td><div class="mod-actions">\n                                    <button onclick="openEditModal('${e}', '${d}', '${t.id}')" title="Edit">✏️</button>\n                                    <button onclick="deleteRun('${e}', '${d}', '${t.id}')" title="Delete">🗑️</button>\n                                </div></td>`:""}\n                        </tr>`})).join("")||'<tr><td colspan="7">No verified runs submitted yet.</td></tr>'}\n                    </tbody>\n                </table>\n            </div>`}),(t=>{console.error("Error fetching leaderboard:",t),T("Failed to load leaderboard.")}))}async function B(){if(!y.isModerator)return void(window.location.hash="#home");E("Loading Moderation Queue..."),await D();try{const t=await o(i(e(b,"runs"),r("status","==","pending")));let n=[];for(const o of t.docs){const t=o.ref.path.split("/");n.push({id:o.id,courseId:t[1],starId:t[3],...o.data()})}for(const t of n)y.starsCache[t.courseId]||await F(t.courseId);v.innerHTML=`\n            <h2>Moderation Queue</h2>\n            <div id="mod-queue-container" class="table-container">\n                <table>\n                    <thead><tr><th>Runner</th><th>Course / Star</th><th>IGT</th><th>RTA</th><th>Video</th><th>Actions</th></tr></thead>\n                    <tbody>\n                        ${n.map((t=>{var e,n,o;const i=y.coursesCache.find(e=>e.id===t.courseId),s=null===(e=y.starsCache[t.courseId])||void 0===e?void 0:e.find(e=>e.id===t.starId);return`\n                                <tr>\n                                    <td>${t.runner}</td>\n                                    <td>${(null==i?void 0:i.name)||t.courseId} /<br>${(null==s?void 0:s.name)||t.starId}</td>\n                                    <td>${t.igt_str}</td>\n                                    <td>${t.rta_str||"N/A"}</td>\n                                    <td><a href="${t.videoLink}" target="_blank">Link</a></td>\n                                    <td><div class="mod-actions">\n                                        <button onclick="updateRunStatus('${t.courseId}', '${t.starId}', '${t.id}', 'verified')" title="Verify">✅</button>\n                                        <button onclick="updateRunStatus('${t.courseId}', '${t.starId}', '${t.id}', 'rejected')" title="Reject">❌</button>\n                                        <button onclick="openEditModal('${t.courseId}', '${t.starId}', '${t.id}')" title="Edit">✏️</button>\n                                        <button onclick="deleteRun('${t.courseId}', '${t.starId}', '${t.id}')" title="Delete">🗑️</button>\n                                    </div></td>\n                                </tr>`})).join("")||'<tr><td colspan="6">The moderation queue is empty.</td></tr>'}\n                    </tbody>\n                </table>\n            </div>`}catch(t){console.error("Error loading mod queue:",t),T("Failed to load moderation queue. You may need to create a Firestore index. Check the console (F12) for an error message with a link to create it.")}}async function P(){E("Calculating World Records...");try{await D();const t=await o(i(e(b,"runs"),r("status","==","verified")));let n={};t.forEach((t=>{const e=t.data(),o=t.ref.path.split("/"),i=`${o[1]}/${o[3]}`;n[i]||(n[i]={runs:[],courseId:o[1],starId:o[3]}),n[i].runs.push(e)}));let s={};for(const t in n){const e=n[t];if(e.runs.length>0){e.runs.sort(((t,e)=>t.igt_numeric-e.igt_numeric));const n=e.runs[0].runner,o=n.toLowerCase().trim();y.starsCache[e.courseId]||await F(e.courseId);const i=y.starsCache[e.courseId]?.find((t=>t.id===e.starId))?.name||e.starId;s[o]||(s[o]={displayName:n,count:0,stars:[]}),s[o].count++,s[o].stars.push(i)}}const a=Object.values(s).sort(((t,e)=>e.count-t.count));v.innerHTML=`\n            <h2>World Records Tally</h2>\n            <div class="table-container">\n                <table>\n                    <thead><tr><th>#</th><th>Runner</th><th>WRs</th><th>Stars</th></tr></thead>\n                    <tbody>\n                        ${a.map(((t,e)=>`\n                            <tr>\n                                <td>${e+1}</td>\n                                <td>${t.displayName}</td>\n                                <td>${t.count}</td>\n                                <td><ul class="wr-list">${t.stars.sort().map((t=>`<li>${t}</li>`)).join("")}</ul></td>\n                            </tr>\n                        `)).join("")||'<tr><td colspan="4">No world records found.</td></tr>'}\n                    </tbody>\n                </table>\n            </div>`}catch(t){console.error("Error calculating world records:",t),T("Failed to calculate world records. You may need to create an index. Check the console (F12) for a link.")}}async function q(){E("Loading Courses for WR History...");const t=await D();v.innerHTML=`\n        <h2>WR History - Select a Course</h2>\n        <div class="grid-container">\n            ${t.map(t=>`\n                <div class="card" onclick="window.location.hash='#wrhistory/${t.id}'">\n                    <h3>${t.name}</h3>\n                </div>\n            `).join("")}\n        </div>`}async function C(t){E("Loading Stars for WR History...");await D();const e=y.coursesCache.find(e=>e.id===t);if(!e)return void(window.location.hash="#wrhistory");const n=await F(t);v.innerHTML=`\n        <div class="breadcrumb"><a href="#wrhistory">WR History</a> / <span>${e.name}</span></div>\n        <h2>Select a Star to View History</h2>\n        <div class="grid-container">\n            ${n.map(e=>`\n                <div class="card" onclick="window.location.hash='#wrhistory/${t}/${e.id}'">\n                    <h3>${e.name}</h3>\n                </div>\n            `).join("")}\n        </div>`}async function R(e,n){E("Loading WR History...");await D(),await F(e);const a=y.coursesCache.find(t=>t.id===e),d=y.starsCache[e]?.find(t=>t.id===n);if(!a||!d)return void(window.location.hash="#wrhistory");try{const c=await o(i(t(b,"courses",e,"stars",n,"runs"),r("status","in",["verified","obsolete"]))),l=c.docs.map(t=>t.data()),u=l.sort(((t,e)=>{const n=new Date(t.date),o=new Date(e.date);return 0!==n-o?n-o:t.igt_numeric-e.igt_numeric}));let m=1/0;const p=[];u.forEach((t=>{t.igt_numeric<m&&(p.push(t),m=t.igt_numeric)})),v.innerHTML=`\n            <div class="breadcrumb">\n                <a href="#wrhistory">WR History</a> / <a href="#wrhistory/${e}">${a.name}</a> / <span>${d.name}</span>\n            </div>\n            <h2>${d.name} - WR History</h2>\n            <div class="table-container">\n                <table>\n                    <thead><tr><th>Player</th><th>Time</th><th>Date</th><th>Video</th></tr></thead>\n                    <tbody>\n                        ${p.reverse().map(t=>`\n                            <tr>\n                                <td>${t.runner}</td>\n                                <td>${t.igt_str}</td>\n                                <td>${t.date}</td>\n                                <td><a href="${t.videoLink}" target="_blank" rel="noopener noreferrer">Link</a></td>\n                            </tr>\n                        `).join("")||`<tr><td colspan="4">No history found for this star.</td></tr>`}\n                    </tbody>\n                </table>\n            </div>`}catch(t){console.error("Error loading WR History:",t),T("Failed to load WR History. You may need to create an index for this query. Check the console (F12).")}}function I(t){y.isModerator=!!t;const e=document.getElementById("moderator-auth-section"),n=document.getElementById("mod-queue-link-container");t?(e.innerHTML=`<a class="action-button" onclick="logoutModerator()">Logout (${t.email})</a>`,n.innerHTML='<a href="#modqueue">Moderation Queue</a>'):(e.innerHTML='<a class="action-button" onclick="openLoginModal()">Moderator Login</a>',n.innerHTML=""),S()}async function M(t){t.preventDefault();const e=t.target,n=e.email.value,o=e.password.value,i=document.getElementById("login-error");i.style.display="none";try{await g(w,n,o),O("login-modal")}catch(t){console.error("Login failed:",t.message),i.textContent="Login failed. Please check your email and password.",i.style.display="block"}}async function x(){await h(w)}function N(t){document.getElementById(t).style.display="flex"}function O(t){document.getElementById(t).style.display="none"}function H(){N("login-modal")}async function U(){const t=await D(),e=document.getElementById("course-select"),n=document.getElementById("star-select");e.innerHTML="<option value=\"\">Select a Course</option>"+t.map(t=>`<option value="${t.id}">${t.name}</option>`).join(""),n.innerHTML='<option value="">Select a Star</option>',n.disabled=!0,e.onchange=async()=>{const t=e.value;if(!t)return n.innerHTML='<option value="">Select a Star</option>',void(n.disabled=!0);const o=await F(t);n.innerHTML="<option value=\"\">Select a Star</option>"+o.map(t=>`<option value="${t.id}">${t.name}</option>`).join(""),n.disabled=!1},N("submission-modal")}async function j(t,e,i){if(!y.isModerator)return;try{const s=await c(n(b,"courses",t,"stars",e,"runs",i));if(!s.exists)return void alert("Run not found!");const r=s.data();document.getElementById("edit-run-id").value=i,document.getElementById("edit-course-id").value=t,document.getElementById("edit-star-id").value=e,document.getElementById("edit-runner").value=r.runner,document.getElementById("edit-igt").value=r.igt_str||"",document.getElementById("edit-rta").value=r.rta_str||"",document.getElementById("edit-date").value=r.date,document.getElementById("edit-videoLink").value=r.videoLink,N("edit-run-modal")}catch(t){console.error("Error opening edit modal:",t),alert("Could not load run data for editing.")}}function K(t){if(!t)return 1/0;if(String(t).includes(":")){const e=String(t).split(":").map(Number);if(2===e.length)return 60*e[0]+e[1];if(3===e.length)return 3600*e[0]+60*e[1]+e[2]}return parseFloat(t)||1/0}async function G(e){e.preventDefault();const o=document.getElementById("submission-form"),i=document.getElementById("submit-run-button");i.disabled=!0,i.textContent="Submitting...";const s=o["course-select"].value,a=o["star-select"].value,c=o.runner.value.trim(),l={runner:c,runner_normalized:c.toLowerCase().trim(),igt_str:o.igt.value,rta_str:o.rta.value||"",igt_numeric:K(o.igt.value),date:o.date.value,videoLink:o.videoLink.value,status:"pending"},u=t(b,"courses",s,"stars",a,"runs");try{const t=await getDocs(query(u,where("runner_normalized","==",l.runner_normalized),where("status","==","verified"),limit(1)));if(!t.empty){const e=t.docs[0].data().igt_numeric;if(l.igt_numeric>=e)return alert("Submission failed: Your new IGT is not faster than your currently verified record."),i.disabled=!1,void(i.textContent="Submit Run")}await d(u,l),alert("Run submitted for moderation!"),O("submission-modal"),o.reset()}catch(t){alert("An error occurred during submission."),console.error("Run submission error:",t)}finally{i.disabled=!1,i.textContent="Submit Run"}}async function z(t){t.preventDefault();if(!y.isModerator)return;const e=t.target,o=e.querySelector("button");o.disabled=!0,o.textContent="Updating...";const i=e["edit-run-id"].value,s=e["edit-course-id"].value,r=e["edit-star-id"].value,a=e["edit-runner"].value,d={runner:a,runner_normalized:a.toLowerCase().trim(),igt_str:e["edit-igt"].value,rta_str:e["edit-rta"].value||"",igt_numeric:K(e["edit-igt"].value),date:e["edit-date"].value,videoLink:e["edit-videoLink"].value};try{await l(n(b,"courses",s,"stars",r,"runs",i),d),alert("Run updated successfully!"),O("edit-run-modal"),S()}catch(t){console.error("Run update error:",t),alert("Failed to update run.")}finally{o.disabled=!1,o.textContent="Update Run"}}async function _(t,e,s,a){if(!y.isModerator)return;if(!confirm(`Are you sure you want to ${a} this run?`))return;const d=n(b,"courses",t,"stars",e,"runs",s);try{"verified"===a?await (async()=>{const r=await c(d);if(!r.exists)throw new Error("Run not found");const a=r.data(),u=i(collection(b,"courses",t,"stars",e,"runs"),where("runner_normalized","==",a.runner_normalized),where("status","==","verified")),p=await o(u),f=m(b);p.forEach((t=>{console.log(`Marking old run ${t.id} as obsolete for runner ${a.runner}`),f.update(t.ref,{status:"obsolete"})})),f.update(d,{status:"verified"}),await f.commit()})():await l(d,{status:a}),alert(`Run has been ${a}.`),S()}catch(t){console.error(`Failed to ${a} run:`,t),alert("An error occurred.")}}async function V(t,e,o){if(!y.isModerator)return;if(!confirm("Are you sure you want to permanently delete this run? This cannot be undone."))return;try{await u(n(b,"courses",t,"stars",e,"o")),alert("Run deleted successfully."),S()}catch(t){console.error("Failed to delete run:",t),alert("An error occurred while deleting the run.")}}async function W(){console.log("This will add/update data. It will NOT delete existing user-submitted runs.");if(!confirm("This will add base data if it's missing. Are you sure?"))return;const e={courses:[{id:"bob",name:"Bob-omb Battlefield",order:1,stars:[{id:"big_bob_omb_on_the_summit",name:"Big Bob-Omb on the Summit",order:1},{id:"footrace_with_koopa_the_quick",name:"Footrace with Koopa the Quick",order:2},{id:"shoot_to_the_island_in_the_sky",name:"Shoot to the Island in the Sky",order:3},{id:"find_the_8_red_coins",name:"Find the 8 Red Coins",order:4},{id:"mario_wings_to_the_sky",name:"Mario Wings to the Sky",order:5},{id:"behind_chain_chomps_gate",name:"Behind Chain Chomp's Gate",order:6},{id:"bob_100_coins",name:"BoB 100 Coins",order:7}]},{id:"wf",name:"Whomp's Fortress",order:2,stars:[{id:"chip_off_whomps_block",name:"Chip off Whomp's Block",order:1},{id:"to_the_top_of_the_fortress",name:"To the Top of the Fortress",order:2},{id:"shoot_into_the_wild_blue",name:"Shoot into the Wild Blue",order:3},{id:"red_coins_on_the_floating_isle",name:"Red Coins on the Floating Isle",order:4},{id:"fall_onto_the_caged_island",name:"Fall onto the Caged Island",order:5},{id:"blast_away_the_wall",name:"Blast Away the Wall",order:6},{id:"wf_100_coins",name:"WF 100 Coins",order:7}]}]};try{console.log("Starting database seed/update...");const o=m(b);for(const i of e.courses){const e=n(t(b,"courses"),i.id);p(e,{name:i.name,order:i.order},{merge:!0});for(const s of i.stars){const i=n(t(e,"stars"),s.id);p(i,{name:s.name,order:s.order},{merge:!0})}}await o.commit(),console.log("DATABASE SEEDING/UPDATE COMPLETE!"),alert("New data has been added/updated successfully!"),window.location.reload()}catch(t){console.error("SEEDING FAILED:",t),alert("Seeding failed. Check the console for details.")}}window.addEventListener("hashchange",S),document.addEventListener("DOMContentLoaded",(()=>{f(w,(t=>{I(t)})),S()})),window.openModal=N,window.closeModal=O,window.openLoginModal=H,window.openSubmissionModal=U,window.handleLogin=M,window.logoutModerator=x,window.handleRunSubmission=G,window.handleRunUpdate=z,window.openEditModal=j,window.updateRunStatus=_,window.deleteRun=V,window.seedDatabase=W;
+          EOF_JS
+
+      # 6. Configura o GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      # 7. Faz o upload do diretório 'deploy' como o artefato do site
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './deploy'
+
+      # 8. Implanta o artefato no GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
