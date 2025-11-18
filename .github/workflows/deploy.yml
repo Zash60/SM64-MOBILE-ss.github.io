@@ -1,8 +1,10 @@
-name: Deploy com Firebase Config
+name: Deploy SM64 Mobile Leaderboard
 
 on:
   push:
-    branches: ["main"] # Confirme se sua branch principal chama 'main' ou 'master'
+    branches:
+      - main
+      - master
 
 permissions:
   contents: read
@@ -20,12 +22,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      # 1. Baixa o código do seu repositório
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      # 2. "BUILD": Cria o arquivo de configuração dinamicamente
-      - name: Criar firebase-config.js
+      - name: Gerar firebase-config.js via Secrets
         run: |
           echo "export const firebaseConfig = {" > firebase-config.js
           echo "  apiKey: '${{ secrets.FIREBASE_API_KEY }}'," >> firebase-config.js
@@ -36,17 +36,14 @@ jobs:
           echo "  appId: '${{ secrets.FIREBASE_APP_ID }}'" >> firebase-config.js
           echo "};" >> firebase-config.js
 
-      # 3. Prepara as páginas para o GitHub Pages
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      # 4. Faz o upload de todos os arquivos da pasta raiz
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
 
-      # 5. Publica o site
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
