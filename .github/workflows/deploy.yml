@@ -1,11 +1,10 @@
-name: Deploy Website to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: ["main"] # Ou "master", verifique o nome da sua branch principal
 
+# Permissões necessárias para o Github Pages
 permissions:
   contents: read
   pages: write
@@ -13,7 +12,7 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -22,31 +21,31 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      # 1. Pega o código do seu repositório
-      - name: Checkout
+      - name: Checkout do código
         uses: actions/checkout@v4
 
-      # 2. Cria o arquivo firebase-config.js de forma robusta
-      #    Esta abordagem com 'cat << EOF' preserva a formatação original do segredo.
-      - name: Create Firebase Config File
+      # --- AQUI A MÁGICA ACONTECE ---
+      # Este passo cria o arquivo firebase-config.js que estava faltando
+      # e preenche com os dados ocultos nos Secrets
+      - name: Gerar firebase-config.js
         run: |
-          cat <<EOF > firebase-config.js
-          ${{ secrets.FIREBASE_CONFIG }}
-          EOF
-        # O workflow pegará o conteúdo do segredo e o colocará aqui,
-        # exatamente como ele está, com todas as linhas e espaços.
+          echo "export const firebaseConfig = {" > firebase-config.js
+          echo "  apiKey: '${{ secrets.FIREBASE_API_KEY }}'," >> firebase-config.js
+          echo "  authDomain: '${{ secrets.FIREBASE_AUTH_DOMAIN }}'," >> firebase-config.js
+          echo "  projectId: '${{ secrets.FIREBASE_PROJECT_ID }}'," >> firebase-config.js
+          echo "  storageBucket: '${{ secrets.FIREBASE_STORAGE_BUCKET }}'," >> firebase-config.js
+          echo "  messagingSenderId: '${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}'," >> firebase-config.js
+          echo "  appId: '${{ secrets.FIREBASE_APP_ID }}'" >> firebase-config.js
+          echo "};" >> firebase-config.js
 
-      # 3. Configura o GitHub Pages
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
-      # 4. Faz o upload de TODOS os arquivos para o artefato do site
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '.' # Faz o upload de tudo na pasta raiz
 
-      # 5. Publica o site
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
