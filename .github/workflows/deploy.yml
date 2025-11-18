@@ -1,10 +1,9 @@
-name: Deploy to GitHub Pages
+name: Deploy com Firebase Config
 
 on:
   push:
-    branches: ["main"] # Ou "master", verifique o nome da sua branch principal
+    branches: ["main"] # Confirme se sua branch principal chama 'main' ou 'master'
 
-# Permissões necessárias para o Github Pages
 permissions:
   contents: read
   pages: write
@@ -21,13 +20,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      # 1. Baixa o código do seu repositório
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      # --- AQUI A MÁGICA ACONTECE ---
-      # Este passo cria o arquivo firebase-config.js que estava faltando
-      # e preenche com os dados ocultos nos Secrets
-      - name: Gerar firebase-config.js
+      # 2. "BUILD": Cria o arquivo de configuração dinamicamente
+      - name: Criar firebase-config.js
         run: |
           echo "export const firebaseConfig = {" > firebase-config.js
           echo "  apiKey: '${{ secrets.FIREBASE_API_KEY }}'," >> firebase-config.js
@@ -38,14 +36,17 @@ jobs:
           echo "  appId: '${{ secrets.FIREBASE_APP_ID }}'" >> firebase-config.js
           echo "};" >> firebase-config.js
 
+      # 3. Prepara as páginas para o GitHub Pages
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      # 4. Faz o upload de todos os arquivos da pasta raiz
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.' # Faz o upload de tudo na pasta raiz
+          path: '.'
 
+      # 5. Publica o site
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
