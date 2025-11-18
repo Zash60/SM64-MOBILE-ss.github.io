@@ -18,15 +18,10 @@
         <div id="user-actions" style="margin-top: 1rem;">
             <a class="action-button" onclick="openSubmissionModal()">Submit Run</a>
             <span style="color: var(--border-color); margin: 0 10px;">|</span>
-            <span id="moderator-auth-section">
-                <a class="action-button" onclick="openLoginModal()">Mod Login</a>
-            </span>
+            <span id="moderator-auth-section"></span>
         </div>
     </header>
-    
-    <main id="app-container">
-        <div class="loader">Loading Leaderboard...</div>
-    </main>
+    <main id="app-container"></main>
 
     <!-- Modals -->
     <div id="submission-modal" class="modal">
@@ -91,7 +86,7 @@
         </div>
     </div>
 
-    <!-- IMPORTANTE: Único ponto de entrada do JavaScript -->
+    <!-- SCRIPT PRINCIPAL (Carrega Firebase e Lógica) -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
