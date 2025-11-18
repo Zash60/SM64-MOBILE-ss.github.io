@@ -1,15 +1,16 @@
 // ======================================================
-// 1. IMPORTAÇÕES E CONFIGURAÇÃO
+// 1. CONFIGURAÇÃO E IMPORTAÇÕES
 // ======================================================
 import { firebaseConfig } from './firebase-config.js';
 
-// Importando serviços do Firebase (v10 Modular)
+// Importando SDK Modular do Firebase (v10)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
     getFirestore, 
     collection, 
     addDoc, 
     getDocs, 
+    getDoc,
     query, 
     where, 
     orderBy, 
@@ -25,13 +26,13 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-// Inicializando o App
+// Inicializar App
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
 // ======================================================
-// 2. DADOS DO JOGO (Fases e Estrelas)
+// 2. DADOS ESTÁTICOS (FASES E ESTRELAS)
 // ======================================================
 const SM64_DATA = [
     { id: "bob", name: "Bob-omb Battlefield", stars: ["Big Bob-omb on the Summit", "Footrace with Koopa the Quick", "Shoot to the Island in the Sky", "Find the 8 Red Coins", "Mario Wings to the Sky", "Behind Chain Chomp's Gate"] },
@@ -54,30 +55,33 @@ const SM64_DATA = [
 ];
 
 // ======================================================
-// 3. EXPOR FUNÇÕES GLOBAIS (Conexão com HTML)
+// 3. VINCULAÇÃO AO ESCOPO GLOBAL (HTML)
 // ======================================================
-// Como usamos type="module", as funções ficam isoladas. 
-// Precisamos anexá-las ao 'window' para o onclick="" do HTML funcionar.
-
+// Necessário pois 'onclick' no HTML não enxerga funções dentro de module
 window.renderCourses = renderCourses;
 window.renderStars = renderStars;
 window.renderLeaderboard = renderLeaderboard;
+
 window.openSubmissionModal = openSubmissionModal;
 window.closeModal = closeModal;
-window.handleRunSubmission = handleRunSubmission;
 window.handleCourseSelectChange = handleCourseSelectChange;
+window.handleRunSubmission = handleRunSubmission;
+
 window.openLoginModal = openLoginModal;
 window.handleLogin = handleLogin;
 window.logout = logout;
+
 window.renderModQueue = renderModQueue;
 window.approveRun = approveRun;
 window.rejectRun = rejectRun;
 
-// ======================================================
-// 4. INICIALIZAÇÃO DA INTERFACE
-// ======================================================
+// Funções para Edição (que estão no seu HTML)
+window.openEditModal = openEditModal;
+window.handleRunUpdate = handleRunUpdate;
 
-// Quando o site carregar, mostra as fases e configura o Auth
+// ======================================================
+// 4. INICIALIZAÇÃO
+// ======================================================
 document.addEventListener('DOMContentLoaded', () => {
     renderCourses();
     setupAuthListener();
@@ -89,14 +93,9 @@ function setupAuthListener() {
         const queueLink = document.getElementById('mod-queue-link-container');
         
         if (user) {
-            // Moderador Logado
-            authSection.innerHTML = `
-                <span style="font-size: 0.9em; margin-right: 10px;">Mod: ${user.email}</span>
-                <a class="action-button" onclick="logout()">Logout</a>
-            `;
-            queueLink.innerHTML = `<a onclick="renderModQueue()" style="color: var(--pending-color);">Mod Queue</a>`;
+            authSection.innerHTML = `<span style="margin-right:10px; font-size:0.9em;">${user.email}</span><a class="action-button" onclick="logout()">Logout</a>`;
+            queueLink.innerHTML = `<a onclick="renderModQueue()" style="color:var(--pending-color)">Mod Queue</a>`;
         } else {
-            // Visitante
             authSection.innerHTML = `<a class="action-button" onclick="openLoginModal()">Mod Login</a>`;
             queueLink.innerHTML = ``;
         }
@@ -104,27 +103,25 @@ function setupAuthListener() {
 }
 
 // ======================================================
-// 5. FUNÇÕES DE RENDERIZAÇÃO (NAVEGAÇÃO)
+// 5. NAVEGAÇÃO E RENDERIZAÇÃO
 // ======================================================
 
-// 5.1 Mostra a lista de Fases
+// Tela 1: Fases
 function renderCourses() {
     const container = document.getElementById('app-container');
     let html = `<h2>Select a Course</h2><div class="grid-container">`;
-    
     SM64_DATA.forEach(course => {
         html += `
         <div class="card" onclick="renderStars('${course.id}')">
             <h3>${course.name}</h3>
-            <p style="color: var(--secondary-color);">${course.stars.length} Stars</p>
+            <p style="color:var(--secondary-color)">${course.stars.length} Stars</p>
         </div>`;
     });
-    
     html += `</div>`;
     container.innerHTML = html;
 }
 
-// 5.2 Mostra a lista de Estrelas de uma fase
+// Tela 2: Estrelas
 function renderStars(courseId) {
     const course = SM64_DATA.find(c => c.id === courseId);
     if (!course) return;
@@ -145,29 +142,26 @@ function renderStars(courseId) {
             <p>${starName}</p>
         </div>`;
     });
-
     html += `</div>`;
     container.innerHTML = html;
 }
 
-// 5.3 Mostra o Leaderboard (Tabela de Recordes)
+// Tela 3: Leaderboard
 async function renderLeaderboard(courseId, starIndex) {
     const container = document.getElementById('app-container');
     const course = SM64_DATA.find(c => c.id === courseId);
     const starName = course.stars[starIndex];
 
-    // Estado de carregamento
     container.innerHTML = `<div class="loader">Loading runs for ${starName}...</div>`;
 
     try {
-        // Consulta ao banco: Pega apenas corridas APROVADAS (verified == true)
-        // Ordena pelo tempo (IGT) ascendente (menor tempo primeiro)
+        // Consulta: Apenas verificados, ordem por IGT
         const q = query(
             collection(db, "runs"), 
             where("courseId", "==", courseId),
             where("starIndex", "==", starIndex.toString()),
             where("verified", "==", true),
-            orderBy("igt", "asc") 
+            orderBy("igt", "asc")
         );
         
         const querySnapshot = await getDocs(q);
@@ -185,7 +179,7 @@ async function renderLeaderboard(courseId, starIndex) {
                         <tr>
                             <th style="width:50px">Rank</th>
                             <th>Runner</th>
-                            <th>IGT (Time)</th>
+                            <th>IGT</th>
                             <th>RTA</th>
                             <th>Date</th>
                             <th>Video</th>
@@ -195,7 +189,7 @@ async function renderLeaderboard(courseId, starIndex) {
         `;
 
         if (querySnapshot.empty) {
-            html += `<tr><td colspan="6" style="text-align:center; padding:2rem;">No verified runs yet. Be the first!</td></tr>`;
+            html += `<tr><td colspan="6" style="text-align:center; padding:2rem;">No verified runs yet.</td></tr>`;
         } else {
             let rank = 1;
             querySnapshot.forEach((doc) => {
@@ -203,39 +197,31 @@ async function renderLeaderboard(courseId, starIndex) {
                 html += `
                     <tr>
                         <td>${rank++}</td>
-                        <td style="font-weight:bold; color:var(--primary-color);">${run.runner}</td>
+                        <td style="font-weight:bold; color:var(--primary-color)">${run.runner}</td>
                         <td>${run.igt}</td>
                         <td>${run.rta || "-"}</td>
                         <td>${run.date}</td>
-                        <td><a href="${run.videoLink}" target="_blank" style="color:var(--accent-color);">Watch</a></td>
+                        <td><a href="${run.videoLink}" target="_blank" style="color:var(--accent-color)">Watch</a></td>
                     </tr>
                 `;
             });
         }
-
         html += `</tbody></table></div>`;
         container.innerHTML = html;
-
     } catch (error) {
-        console.error("Erro ao buscar runs:", error);
-        // Se der erro de índice, avisar no console e na tela
-        if (error.message.includes("index")) {
-            console.warn("Firebase Index necessário. Crie o link que apareceu no console acima.");
-        }
-        container.innerHTML = `<p class="error-message" style="display:block;">Error loading runs. Check console for details.</p>`;
+        console.error("Leaderboard error:", error);
+        container.innerHTML = `<p class="error-message" style="display:block">Error loading runs. Check console.</p>`;
     }
 }
 
 // ======================================================
-// 6. SISTEMA DE SUBMISSÃO (ENVIO DE RUN)
+// 6. MODAIS E SUBMISSÃO
 // ======================================================
 
-// Abre o modal
 function openSubmissionModal() {
     const modal = document.getElementById('submission-modal');
     const courseSelect = document.getElementById('course-select');
     
-    // Se o select estiver vazio (exceto a opção default), preenche com as fases
     if (courseSelect.options.length <= 1) {
         SM64_DATA.forEach(course => {
             const option = document.createElement('option');
@@ -244,25 +230,21 @@ function openSubmissionModal() {
             courseSelect.appendChild(option);
         });
     }
-    
     modal.style.display = "flex";
 }
 
-// Fecha qualquer modal pelo ID
 function closeModal(modalId) {
     document.getElementById(modalId).style.display = "none";
 }
 
-// Quando muda a fase, atualiza a lista de estrelas
 function handleCourseSelectChange(courseId) {
     const starSelect = document.getElementById('star-select');
-    starSelect.innerHTML = '<option value="">Select a Star</option>'; // Reseta
+    starSelect.innerHTML = '<option value="">Select a Star</option>';
     
     if (!courseId) {
         starSelect.disabled = true;
         return;
     }
-
     const course = SM64_DATA.find(c => c.id === courseId);
     if (course) {
         course.stars.forEach((star, index) => {
@@ -275,16 +257,13 @@ function handleCourseSelectChange(courseId) {
     }
 }
 
-// Envia o formulário para o Firestore
 async function handleRunSubmission(event) {
-    event.preventDefault(); // Evita recarregar a página
-    
+    event.preventDefault();
     const btn = document.getElementById('submit-run-button');
     const originalText = btn.innerText;
     btn.disabled = true;
     btn.innerText = "Submitting...";
 
-    // Coleta dados do formulário
     const courseId = document.getElementById('course-select').value;
     const starIndex = document.getElementById('star-select').value;
     const runner = document.getElementById('runner').value;
@@ -294,30 +273,24 @@ async function handleRunSubmission(event) {
     const videoLink = document.getElementById('videoLink').value;
 
     try {
-        // Salva no banco de dados
         await addDoc(collection(db, "runs"), {
-            courseId: courseId,
-            starIndex: starIndex.toString(), // Importante ser string para bater com a query
-            runner: runner,
-            igt: igt,
-            rta: rta,
-            date: date,
-            videoLink: videoLink,
-            verified: false, // Padrão: Pendente de aprovação
+            courseId,
+            starIndex: starIndex.toString(),
+            runner,
+            igt,
+            rta,
+            date,
+            videoLink,
+            verified: false,
             platform: "Mobile",
-            timestamp: serverTimestamp() // Data e hora do servidor
+            timestamp: serverTimestamp()
         });
-
-        alert("Run submitted successfully! It needs moderator approval to appear.");
+        alert("Run submitted! Awaiting verification.");
         closeModal('submission-modal');
         event.target.reset();
-        
-        // Reseta o select de estrelas
         document.getElementById('star-select').innerHTML = '<option value="">Select a Star</option>';
         document.getElementById('star-select').disabled = true;
-
     } catch (error) {
-        console.error("Error submitting run:", error);
         alert("Error: " + error.message);
     } finally {
         btn.disabled = false;
@@ -326,154 +299,179 @@ async function handleRunSubmission(event) {
 }
 
 // ======================================================
-// 7. ÁREA DO MODERADOR (ADMIN)
+// 7. ADMINISTRAÇÃO E FILA DE MODERAÇÃO
 // ======================================================
 
-// Abre modal de login
 function openLoginModal() {
     document.getElementById('login-modal').style.display = "flex";
 }
 
-// Faz o login
 async function handleLogin(event) {
     event.preventDefault();
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const errorMsg = document.getElementById('login-error');
-    
     errorMsg.style.display = "none";
 
     try {
         await signInWithEmailAndPassword(auth, email, password);
         closeModal('login-modal');
-        // A UI atualiza automaticamente via onAuthStateChanged
         document.getElementById('login-form').reset();
     } catch (error) {
-        console.error("Login failed:", error);
-        errorMsg.textContent = "Login failed. Check email/password.";
+        errorMsg.textContent = "Login failed.";
         errorMsg.style.display = "block";
     }
 }
 
-// Faz logout
 function logout() {
     signOut(auth).then(() => {
-        alert("Logged out successfully.");
-        renderCourses(); // Volta pra home se estiver na queue
-    }).catch((error) => {
-        console.error("Logout error:", error);
+        alert("Logged out.");
+        renderCourses();
     });
 }
 
-// Mostra a fila de moderação (Runs pendentes)
 async function renderModQueue() {
-    // Segurança extra no frontend
     if (!auth.currentUser) {
-        alert("Please log in first.");
+        alert("Please log in.");
         return;
     }
-
     const container = document.getElementById('app-container');
-    container.innerHTML = `<div class="loader">Loading Pending Submissions...</div>`;
+    container.innerHTML = `<div class="loader">Loading Queue...</div>`;
 
     try {
-        // Busca runs onde verified == false
         const q = query(
             collection(db, "runs"), 
             where("verified", "==", false),
             orderBy("timestamp", "desc")
         );
-        
         const querySnapshot = await getDocs(q);
         
         let html = `
             <div class="breadcrumb"><a onclick="renderCourses()">Back to Home</a></div>
-            <h2 style="color: var(--pending-color);">Moderation Queue</h2>
+            <h2 style="color:var(--pending-color)">Moderation Queue</h2>
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>Course / Star</th>
+                            <th>Info</th>
                             <th>Runner</th>
                             <th>IGT</th>
                             <th>Video</th>
-                            <th>Action</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
         `;
 
         if (querySnapshot.empty) {
-            html += `<tr><td colspan="5" style="text-align:center;">No pending runs. Clean queue!</td></tr>`;
+            html += `<tr><td colspan="5" style="text-align:center;">No pending runs.</td></tr>`;
         } else {
             querySnapshot.forEach((docSnap) => {
                 const run = docSnap.data();
                 const runId = docSnap.id;
-                
-                // Busca nomes bonitos para exibir
                 const course = SM64_DATA.find(c => c.id === run.courseId);
                 const courseName = course ? course.name : run.courseId;
-                const starName = course ? (parseInt(run.starIndex) + 1) : run.starIndex;
+                const starNum = parseInt(run.starIndex) + 1;
 
                 html += `
                     <tr id="row-${runId}">
-                        <td>
-                            <strong>${courseName}</strong><br>
-                            <span style="font-size:0.8em; color:#aaa">Star ${starName}</span>
-                        </td>
+                        <td><strong>${courseName}</strong><br><span style="font-size:0.8em;color:#888">Star ${starNum}</span></td>
                         <td>${run.runner}</td>
                         <td>${run.igt}</td>
                         <td><a href="${run.videoLink}" target="_blank">Link</a></td>
                         <td>
                             <div class="mod-actions">
-                                <button onclick="approveRun('${runId}')" title="Approve" style="color: #4caf50; border-color: #4caf50;">✓</button>
-                                <button onclick="rejectRun('${runId}')" title="Reject" style="color: #f44336; border-color: #f44336;">✗</button>
+                                <button onclick="approveRun('${runId}')" style="color:#4caf50;border-color:#4caf50">✓</button>
+                                <button onclick="openEditModal('${runId}')" style="color:#2196F3;border-color:#2196F3">✎</button>
+                                <button onclick="rejectRun('${runId}')" style="color:#f44336;border-color:#f44336">✗</button>
                             </div>
                         </td>
                     </tr>
                 `;
             });
         }
-
         html += `</tbody></table></div>`;
         container.innerHTML = html;
-
     } catch (error) {
-        console.error("Queue Error:", error);
-        container.innerHTML = `<p class="error-message" style="display:block;">Error loading queue.</p>`;
+        console.error(error);
+        container.innerHTML = `<p class="error-message" style="display:block">Error loading queue.</p>`;
     }
 }
 
-// Aprova uma run
 async function approveRun(runId) {
-    if (!confirm("Approve this run?")) return;
+    if (!confirm("Approve run?")) return;
+    try {
+        await updateDoc(doc(db, "runs", runId), { verified: true });
+        const row = document.getElementById(`row-${runId}`);
+        if (row) row.remove();
+    } catch (e) { alert("Error: " + e.message); }
+}
+
+async function rejectRun(runId) {
+    if (!confirm("Reject and Delete run?")) return;
+    try {
+        await deleteDoc(doc(db, "runs", runId));
+        const row = document.getElementById(`row-${runId}`);
+        if (row) row.remove();
+    } catch (e) { alert("Error: " + e.message); }
+}
+
+// ======================================================
+// 8. EDIÇÃO (COMPLETA)
+// ======================================================
+
+async function openEditModal(runId) {
+    const modal = document.getElementById('edit-run-modal');
     
+    // Carregar dados para o modal
     try {
         const runRef = doc(db, "runs", runId);
-        await updateDoc(runRef, { verified: true });
+        const docSnap = await getDoc(runRef);
         
-        // Remove da tabela visualmente
-        const row = document.getElementById(`row-${runId}`);
-        if(row) row.remove();
-        
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            document.getElementById('edit-run-id').value = runId;
+            document.getElementById('edit-runner').value = data.runner;
+            document.getElementById('edit-igt').value = data.igt;
+            document.getElementById('edit-rta').value = data.rta || "";
+            document.getElementById('edit-date').value = data.date;
+            document.getElementById('edit-videoLink').value = data.videoLink;
+            
+            modal.style.display = "flex";
+        } else {
+            alert("Run not found!");
+        }
     } catch (error) {
-        alert("Error approving: " + error.message);
+        console.error(error);
+        alert("Error loading run data.");
     }
 }
 
-// Rejeita uma run (Deleta do banco)
-async function rejectRun(runId) {
-    if (!confirm("Reject and DELETE this run?")) return;
+async function handleRunUpdate(event) {
+    event.preventDefault();
+    const runId = document.getElementById('edit-run-id').value;
+    if (!runId) return;
+
+    const btn = document.getElementById('update-run-button');
+    btn.innerText = "Updating...";
+    
+    const runner = document.getElementById('edit-runner').value;
+    const igt = document.getElementById('edit-igt').value;
+    const rta = document.getElementById('edit-rta').value;
+    const date = document.getElementById('edit-date').value;
+    const videoLink = document.getElementById('edit-videoLink').value;
 
     try {
         const runRef = doc(db, "runs", runId);
-        await deleteDoc(runRef);
-        
-        // Remove da tabela visualmente
-        const row = document.getElementById(`row-${runId}`);
-        if(row) row.remove();
-
+        await updateDoc(runRef, {
+            runner, igt, rta, date, videoLink
+        });
+        alert("Run updated!");
+        closeModal('edit-run-modal');
+        renderModQueue(); // Atualiza a lista
     } catch (error) {
-        alert("Error rejecting: " + error.message);
+        alert("Error updating: " + error.message);
+    } finally {
+        btn.innerText = "Update Run";
     }
 }
