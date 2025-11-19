@@ -114,6 +114,7 @@ main {
     text-shadow: 2px 2px 3px #000;
     border-bottom: 2px solid #fff;
 
+    /* Padrão de Listras Diagonais */
     background-image: linear-gradient(
         45deg, 
         rgba(255, 255, 255, 0.15) 25%, 
@@ -127,7 +128,7 @@ main {
     background-size: 30px 30px;
 }
 
-/* --- CORES DAS FASES --- */
+/* --- CORES DAS FASES (LISTA COMPLETA) --- */
 .bg-bob { background-color: #228B22; } /* 1. Verde */
 .bg-wf  { background-color: #696969; } /* 2. Cinza */
 .bg-jrb { background-color: #004080; } /* 3. Azul Escuro */
@@ -183,8 +184,14 @@ main {
     color: #fff;
 }
 
+/* Linhas clicáveis e Hover */
+.records-table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
 .records-table tbody tr:hover {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.15);
 }
 
 /* --- BOTÕES DE MODERAÇÃO PEQUENOS --- */
@@ -247,11 +254,12 @@ main {
     flex-shrink: 0;
     width: 50px;
     height: 50px;
-    /* Pode usar uma imagem aqui se quiser */
     background-color: transparent; 
     display: flex;
     justify-content: center;
     align-items: center;
+    /* Se quiser fundo escuro no ícone, descomente abaixo */
+    /* background-color: #2c1e0b; border-radius: 50%; border: 2px solid var(--timeline-accent); */
 }
 
 .timeline-icon {
@@ -464,4 +472,4 @@ button:disabled { background-color: #444; cursor: not-allowed; }
     .timeline-card, .mod-card { flex-direction: column; align-items: flex-start; }
     .mod-actions { width: 100%; justify-content: stretch; margin-top: 10px; }
     .mod-actions button { flex: 1; }
-        }
+}
