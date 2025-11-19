@@ -68,28 +68,17 @@ async function loadData() {
     } catch (err) { console.error(err); container.innerHTML = '<div style="text-align:center">Error loading data.</div>'; }
 }
 
-// --- FUNÇÃO MATEMÁTICA DE TEMPO (A CORREÇÃO PRINCIPAL) ---
+// --- MATEMÁTICA DE TEMPO ---
 function timeToSeconds(str) {
-    if(!str || str === '-' || str === '') return 9999999; // Valor alto para ir pro final
-    
-    // Normaliza: Troca ' e " por : e .
+    if(!str || str === '-' || str === '') return 9999999;
     let clean = str.trim().replace(/'/g, ':').replace(/"/g, '.');
-    
-    // Se tiver formato 30"29 (que vira 30.29), retorna float direto
-    if (!clean.includes(':')) {
-        return parseFloat(clean);
-    }
-
-    // Se tiver formato 1:18.23 (Minutos:Segundos.Centesimos)
+    if (!clean.includes(':')) return parseFloat(clean);
     let parts = clean.split(':');
-    if(parts.length === 2) {
-        return parseInt(parts[0]) * 60 + parseFloat(parts[1]);
-    }
-    
+    if(parts.length === 2) return parseInt(parts[0]) * 60 + parseFloat(parts[1]);
     return parseFloat(clean);
 }
 
-// --- RENDER HOME (COURSES) ---
+// --- RENDER HOME ---
 function renderCoursesTable() {
     const container = document.getElementById('courses-container');
     container.innerHTML = '';
@@ -98,11 +87,8 @@ function renderCoursesTable() {
         let rows = '';
         course.stars.forEach(starName => {
             const starRuns = GLOBAL_RUNS.filter(r => r.courseId === course.id && r.star === starName);
-            
-            // ORDENAÇÃO MATEMÁTICA: Menor tempo (IGT) primeiro
             starRuns.sort((a, b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
-            
-            const wr = starRuns[0]; // O primeiro é sempre o melhor tempo
+            const wr = starRuns[0];
             
             const modBtns = (IS_MOD && wr) ? `
                 <td class="mod-controls">
@@ -153,6 +139,8 @@ function renderTimeline() {
 
     recent.forEach(run => {
         const textHTML = generateTimelineText(run);
+        const tagHTML = getRecordTag(run); // Nova função para decidir a tag [RT], [IGT], etc.
+
         const modBtns = IS_MOD ? `
             <div style="min-width:60px; text-align:right;">
                 <button class="btn-edit-sm" onclick="openEditModal('${run.id}')"><i class="fas fa-edit"></i></button>
@@ -166,7 +154,7 @@ function renderTimeline() {
                 </div>
                 <div class="timeline-content">
                     <div class="timeline-header-row">
-                        <h4 style="color:#fff; margin:0;">[IGT] ${getCoursesCode(run.courseId)} - ${run.star}</h4>
+                        <h4 style="color:#fff; margin:0;">${tagHTML} ${getCoursesCode(run.courseId)} - ${run.star}</h4>
                         ${modBtns}
                     </div>
                     <div class="timeline-date">${formatDate(run.date)}</div>
@@ -176,41 +164,64 @@ function renderTimeline() {
     });
 }
 
+// --- LÓGICA DE TAG (RT vs IGT) ---
+function getRecordTag(currentRun) {
+    const previousRuns = GLOBAL_RUNS.filter(r => 
+        r.courseId === currentRun.courseId && r.star === currentRun.star && r.date < currentRun.date
+    );
+
+    if (previousRuns.length === 0) return "[New]"; // Primeiro registro
+
+    // Melhor IGT anterior
+    previousRuns.sort((a, b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
+    const prevBestIGT = previousRuns[0];
+
+    // Melhor RT anterior
+    const prevRunsRT = previousRuns.filter(r => r.rta && r.rta !== '-');
+    prevRunsRT.sort((a, b) => timeToSeconds(a.rta) - timeToSeconds(b.rta));
+    const prevBestRT = prevRunsRT.length > 0 ? prevRunsRT[0] : null;
+
+    const beatIGT = timeToSeconds(currentRun.igt) < timeToSeconds(prevBestIGT.igt);
+    
+    let beatRT = false;
+    if (prevBestRT && currentRun.rta && currentRun.rta !== '-') {
+        if (timeToSeconds(currentRun.rta) < timeToSeconds(prevBestRT.rta)) {
+            beatRT = true;
+        }
+    } else if (!prevBestRT && currentRun.rta && currentRun.rta !== '-') {
+        // Se não tinha RT antes e agora tem, consideramos um recorde de RT
+        beatRT = true;
+    }
+
+    if (beatRT && beatIGT) return "[RT/IGT]";
+    if (beatRT) return "[RT]";
+    if (beatIGT) return "[IGT]";
+    
+    return "[Run]"; // Não bateu recorde
+}
+
 // --- LÓGICA DE TEXTO DA TIMELINE ---
 function generateTimelineText(currentRun) {
-    const previousRuns = GLOBAL_RUNS.filter(r => 
-        r.courseId === currentRun.courseId && 
-        r.star === currentRun.star && 
-        r.date < currentRun.date // Apenas datas anteriores
-    );
+    const previousRuns = GLOBAL_RUNS.filter(r => r.courseId === currentRun.courseId && r.star === currentRun.star && r.date < currentRun.date);
 
     if (previousRuns.length === 0) {
         return `<a href="#">@${currentRun.runner}</a> set the first record with <b>${currentRun.igt}</b> (RT: ${currentRun.rta})!`;
     }
 
-    // Ordena anteriores matematicamente
     previousRuns.sort((a, b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
     const prevBestIGT = previousRuns[0];
     
-    // Ordena RT anteriores matematicamente
-    const prevRunsRT = previousRuns.filter(r => r.rta && r.rta !== '-' && r.rta !== '');
+    const prevRunsRT = previousRuns.filter(r => r.rta && r.rta !== '-');
     prevRunsRT.sort((a, b) => timeToSeconds(a.rta) - timeToSeconds(b.rta));
     const prevBestRT = prevRunsRT.length > 0 ? prevRunsRT[0] : null;
 
-    // Comparação Atual
-    const currIGTVal = timeToSeconds(currentRun.igt);
-    const prevIGTVal = timeToSeconds(prevBestIGT.igt);
-    
-    // Bateu o recorde? (Menor que o anterior)
-    const beatIGT = currIGTVal < prevIGTVal;
+    const beatIGT = timeToSeconds(currentRun.igt) < timeToSeconds(prevBestIGT.igt);
     const igtDiff = calculateTimeDiff(prevBestIGT.igt, currentRun.igt);
 
     let beatRT = false;
     let rtDiff = "00\"00";
     if (prevBestRT && currentRun.rta && currentRun.rta !== '-') {
-        const currRTVal = timeToSeconds(currentRun.rta);
-        const prevRTVal = timeToSeconds(prevBestRT.rta);
-        if (currRTVal < prevRTVal) {
+        if (timeToSeconds(currentRun.rta) < timeToSeconds(prevBestRT.rta)) {
             beatRT = true;
             rtDiff = calculateTimeDiff(prevBestRT.rta, currentRun.rta);
         }
@@ -220,24 +231,23 @@ function generateTimelineText(currentRun) {
 
     if (beatRT && beatIGT) {
         text += `<a href="#">@${currentRun.runner}</a> beat the real time record and the best IGT with a <b>${currentRun.rta}</b> <span class="diff-neg">(-${rtDiff})</span> and <b>${currentRun.igt}</b> <span class="diff-neg">(-${igtDiff})</span>!`;
+    } else if (beatRT) {
+        text += `<a href="#">@${currentRun.runner}</a> beat the real time record with <b>${currentRun.rta}</b> <span class="diff-neg">(-${rtDiff})</span>!`;
     } else if (beatIGT) {
         text += `<a href="#">@${currentRun.runner}</a> beat the best IGT with a <b>${currentRun.igt}</b> <span class="diff-neg">(-${igtDiff})</span>!`;
     } else {
-        // Se for pior, apenas mostra que completou
         text += `<a href="#">@${currentRun.runner}</a> completed this star in <b>${currentRun.igt}</b> (RT: ${currentRun.rta}).`;
     }
 
-    // Se bateu recorde, mostra quem era o anterior
-    if (beatRT || beatIGT) {
-        text += `<br><br>`;
-        if (beatRT && prevBestRT) {
-            const daysAgo = calculateDaysAgo(currentRun.date, prevBestRT.date);
-            text += `The previous real time record was <b>${prevBestRT.rta}</b> by <a href="#">@${prevBestRT.runner}</a>. (Achieved: ${daysAgo} days ago)<br>`;
-        }
-        if (beatIGT) {
-            const daysAgo = calculateDaysAgo(currentRun.date, prevBestIGT.date);
-            text += `The previous best IGT was <b>${prevBestIGT.igt}</b> by <a href="#">@${prevBestIGT.runner}</a>. (Achieved: ${daysAgo} days ago)`;
-        }
+    if (beatRT && prevBestRT) {
+        const daysAgo = calculateDaysAgo(currentRun.date, prevBestRT.date);
+        text += `<br><br>The previous real time record was <b>${prevBestRT.rta}</b> by <a href="#">@${prevBestRT.runner}</a>. (Achieved: ${daysAgo} days ago)`;
+    }
+    
+    if (beatIGT) {
+        const daysAgo = calculateDaysAgo(currentRun.date, prevBestIGT.date);
+        const br = (beatRT && prevBestRT) ? "<br>" : "<br><br>";
+        text += `${br}The previous best IGT was <b>${prevBestIGT.igt}</b> by <a href="#">@${prevBestIGT.runner}</a>. (Achieved: ${daysAgo} days ago)`;
     }
 
     return text;
@@ -248,7 +258,8 @@ function calculateTimeDiff(oldTimeStr, newTimeStr) {
     const t2 = timeToSeconds(newTimeStr);
     const diff = Math.abs(t1 - t2);
     
-    // Formata a diferença
+    if(diff < 0.01) return '00"00';
+
     let secs = Math.floor(diff);
     let centis = Math.round((diff - secs) * 100);
     
@@ -257,21 +268,17 @@ function calculateTimeDiff(oldTimeStr, newTimeStr) {
     const sStr = secs < 10 ? "0" + secs : secs;
     const cStr = centis < 10 ? "0" + centis : centis;
 
-    // Se tiver minutos
     if (secs >= 60) {
         let mins = Math.floor(secs / 60);
         let restSecs = secs % 60;
         const rsStr = restSecs < 10 ? "0" + restSecs : restSecs;
         return `${mins}'${rsStr}"${cStr}`;
     }
-
     return `${sStr}"${cStr}`;
 }
 
 function calculateDaysAgo(d1, d2) {
-    const date1 = new Date(d1);
-    const date2 = new Date(d2);
-    const diff = Math.abs(date1 - date2);
+    const diff = Math.abs(new Date(d1) - new Date(d2));
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
@@ -306,22 +313,32 @@ async function loadModQueue() {
     qList.innerHTML = html;
 }
 
-// --- DETALHES DA ESTRELA ---
+// --- DETALHES DA ESTRELA (COM TROCA DE VÍDEO) ---
 window.openStarDetail = (cId, sName) => {
     window.switchView('detail');
     const content = document.getElementById('star-detail-content');
     const runs = GLOBAL_RUNS.filter(r => r.courseId === cId && r.star === sName);
     const cColor = COURSES.find(c => c.id === cId)?.color || 'bg-bob';
 
-    // Acha o WR (Matemático)
+    // WR Inicial
     const runsIGT = [...runs].sort((a,b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
     const wr = runsIGT[0];
 
-    let vidHtml = '<p style="text-align:center;padding:20px;color:#777">No video available</p>';
+    // Container de Vídeo (Com ID para troca)
+    let vidContent = '<p style="text-align:center;padding:20px;color:#777">No video available</p>';
     if(wr && wr.videoLink) {
         const yId = getYoutubeId(wr.videoLink);
-        if(yId) vidHtml = `<div class="video-container"><iframe src="https://www.youtube.com/embed/${yId}" frameborder="0" allowfullscreen></iframe></div>`;
+        if(yId) vidContent = `<iframe src="https://www.youtube.com/embed/${yId}" frameborder="0" allowfullscreen></iframe>`;
     }
+    
+    const videoSection = `
+        <div class="video-container" id="main-video-display">
+            ${vidContent}
+        </div>
+        <div id="video-info" style="text-align:center; margin-bottom:20px; font-size:1.1rem; color:#ccc;">
+            ${wr ? `WR by <b>${wr.runner}</b> in <b>${wr.igt}</b>` : ''}
+        </div>
+    `;
 
     const igtHistory = [...runs].sort((a,b) => b.date.localeCompare(a.date));
     const igtTable = generateHistoryTable(igtHistory, "Best IGT History", "history-igt");
@@ -331,21 +348,48 @@ window.openStarDetail = (cId, sName) => {
     content.innerHTML = `
         <div class="course-section" style="background:none;border:none;box-shadow:none">
             <div class="detail-header ${cColor}">${sName}</div>
-            ${vidHtml}
+            ${videoSection}
             ${rtTable}
             ${igtTable}
         </div>`;
 };
 
+// Função para trocar vídeo ao clicar
+window.changeVideo = (videoId, runner, time, isRT) => {
+    const container = document.getElementById('main-video-display');
+    const info = document.getElementById('video-info');
+    
+    const ytId = getYoutubeId(videoId); // Assume que o ID ou Link é passado
+    if(ytId) {
+        container.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}" frameborder="0" allowfullscreen></iframe>`;
+        info.innerHTML = `Selected Run: <b>${runner}</b> - <b>${time}</b> ${isRT ? '(RT)' : ''}`;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        alert("Invalid video link for this run.");
+    }
+};
+
 function generateHistoryTable(runs, title, cssClass) {
     let rows = '';
+    const isRTTable = title.includes("Real Time");
+    
     runs.forEach(r => {
         const modBtns = IS_MOD ? `
-            <td class="mod-controls">
+            <td class="mod-controls" onclick="event.stopPropagation()">
                 <button class="btn-edit-sm" onclick="openEditModal('${r.id}')"><i class="fas fa-edit"></i></button>
                 <button class="btn-del-sm" onclick="deleteRun('${r.id}')"><i class="fas fa-trash"></i></button>
             </td>` : '';
-        rows += `<tr><td>${formatDate(r.date)}</td><td>${r.runner}</td><td>${r.rta}</td><td>${r.igt}</td>${IS_MOD ? modBtns : ''}</tr>`;
+        
+        // Adiciona onclick para trocar o vídeo
+        const timeVal = isRTTable ? r.rta : r.igt;
+        rows += `
+            <tr onclick="changeVideo('${r.videoLink}', '${r.runner}', '${timeVal}', ${isRTTable})">
+                <td>${formatDate(r.date)}</td>
+                <td>${r.runner}</td>
+                <td>${r.rta}</td>
+                <td>${r.igt}</td>
+                ${IS_MOD ? modBtns : ''}
+            </tr>`;
     });
     const headerCols = IS_MOD ? '<th>Action</th>' : '';
     return `
@@ -361,10 +405,7 @@ function generateHistoryTable(runs, title, cssClass) {
 // --- EDIT & HELPERS ---
 window.openEditModal = (runId) => {
     let run = GLOBAL_RUNS.find(r => r.id === runId);
-    if(!run) {
-        alert("Editing pending runs is restricted in this view. Reject and Resubmit is safer.");
-        return;
-    }
+    if(!run) { alert("Cannot edit pending runs here."); return; }
     document.getElementById('edit-id').value = run.id;
     document.getElementById('edit-runner').value = run.runner;
     document.getElementById('edit-igt').value = run.igt;
