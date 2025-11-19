@@ -69,26 +69,24 @@ async function loadData() {
     } catch (err) { console.error(err); container.innerHTML = '<div style="text-align:center">Error loading data.</div>'; }
 }
 
-// --- SISTEMA DE VÍDEO UNIFICADO (YOUTUBE + BILIBILI) ---
+// --- CENTRALIZADOR DE EMBED (YOUTUBE + BILIBILI) ---
 function getVideoEmbed(url) {
     if (!url) return null;
 
     // 1. YouTube
     const ytMatch = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
     if (ytMatch && ytMatch[2].length === 11) {
-        return `<iframe src="https://www.youtube.com/embed/${ytMatch[2]}" frameborder="0" allowfullscreen></iframe>`;
+        return `<iframe src="https://www.youtube.com/embed/${ytMatch[2]}" frameborder="0" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
     }
 
-    // 2. Bilibili
-    // Tenta encontrar o padrão BV...
-    const biliMatch = url.match(/(BV\w+)/);
-    if (biliMatch && biliMatch[1]) {
+    // 2. Bilibili (Procura pelo padrão BV)
+    const biliMatch = url.match(/(BV[a-zA-Z0-9]+)/);
+    if (biliMatch) {
         const bvid = biliMatch[1];
-        // Player Bilibili sem autoplay
-        return `<iframe src="//player.bilibili.com/player.html?bvid=${bvid}&page=1&high_quality=1&danmaku=0" frameborder="0" allowfullscreen style="width:100%;height:100%"></iframe>`;
+        return `<iframe src="https://player.bilibili.com/player.html?bvid=${bvid}&page=1&high_quality=1&danmaku=0" frameborder="0" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
     }
 
-    return null; // Link não suportado
+    return null;
 }
 
 // --- MATEMÁTICA DE TEMPO ---
@@ -153,7 +151,7 @@ function renderCoursesTable() {
     });
 }
 
-// --- TIMELINE ---
+// --- TIMELINE (COM SUPORTE BILIBILI) ---
 function renderTimeline() {
     const feed = document.getElementById('timeline-feed');
     feed.innerHTML = '';
@@ -198,7 +196,7 @@ function renderTimeline() {
     });
 }
 
-// Função para abrir/fechar vídeo na timeline (USANDO getVideoEmbed)
+// FUNÇÃO CORRIGIDA: Agora usa getVideoEmbed (Suporta YT e Bilibili)
 window.toggleTimelineVideo = (runId, videoUrl) => {
     const container = document.getElementById(`vid-container-${runId}`);
     const btn = document.getElementById(`vid-btn-${runId}`);
@@ -216,12 +214,12 @@ window.toggleTimelineVideo = (runId, videoUrl) => {
             btn.classList.add('active');
             btn.innerHTML = '<i class="fas fa-times-circle"></i> Close Video';
         } else {
-            alert("Invalid video link or platform not supported.");
+            alert("Invalid video link.");
         }
     }
 };
 
-// --- LÓGICA DE TAG E TEXTO DA TIMELINE ---
+// --- LÓGICA DE TAG E TEXTO ---
 function getRecordTag(currentRun) {
     const previousRuns = GLOBAL_RUNS.filter(r => 
         r.courseId === currentRun.courseId && r.star === currentRun.star && r.date < currentRun.date
@@ -306,7 +304,7 @@ async function loadModQueue() {
     qList.innerHTML = html;
 }
 
-// --- DETALHES DA ESTRELA (COM SUPORTE BILIBILI) ---
+// --- DETALHES DA ESTRELA ---
 window.openStarDetail = (cId, sName) => {
     window.switchView('detail');
     const content = document.getElementById('star-detail-content');
@@ -317,8 +315,7 @@ window.openStarDetail = (cId, sName) => {
     const wr = runsIGT[0];
 
     let vidContent = '<p style="text-align:center;padding:20px;color:#777">No video available</p>';
-    
-    // USA A NOVA FUNÇÃO UNIFICADA
+    // Usa a função centralizadagetVideoEmbed para suportar Bilibili e YouTube
     const embedHTML = getVideoEmbed(wr?.videoLink);
     if(embedHTML) {
         vidContent = embedHTML;
@@ -347,7 +344,7 @@ window.openStarDetail = (cId, sName) => {
         </div>`;
 };
 
-// Função para trocar o vídeo ao clicar na tabela (USANDO getVideoEmbed)
+// FUNÇÃO CORRIGIDA: Usa getVideoEmbed para troca de vídeo (Bilibili+YT)
 window.changeVideo = (videoId, runner, time, isRT) => {
     const container = document.getElementById('main-video-display');
     const info = document.getElementById('video-info');
