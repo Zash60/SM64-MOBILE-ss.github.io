@@ -1,35 +1,164 @@
-:root { --bg-color: #121212; --text-color: #e0e0e0; --primary-color: #ffffff; --secondary-color: #b3b3b3; --border-color: #333333; --pending-color: #f39c12; --accent-color: #6200ee; --rejected-color: #e74c3c; }
-body { background-color: var(--bg-color); color: var(--text-color); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; margin: 0; padding: 1rem; }
-header { text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem; }
-h1, h2, h3 { color: var(--primary-color); }
-nav { margin-top: 1rem; display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
-nav a, .action-button { color: var(--secondary-color); text-decoration: none; font-weight: bold; cursor: pointer; }
-nav a:hover, .action-button:hover { color: var(--primary-color); }
-main { max-width: 900px; margin: 0 auto; }
-.grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
-.card { background-color: #1e1e1e; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: transform 0.2s; }
-.card:hover { transform: translateY(-5px); }
-.table-container { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; }
-th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border-color); }
-.mod-actions { display: flex; gap: 5px; align-items: center; white-space: nowrap; }
-.mod-actions button { background: none; border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 1rem; line-height: 1; }
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
-.modal-content { background-color: #2a2a2a; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; position: relative; max-height: 90vh; overflow-y: auto; }
-.close-btn { position: absolute; top: 10px; right: 15px; font-size: 1.5rem; cursor: pointer; }
-form label { display: block; margin-top: 1rem; }
-.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
-form input, form select, form button { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background-color: #333; color: var(--text-color); box-sizing: border-box; }
-form button { background-color: var(--accent-color); font-weight: bold; cursor: pointer; }
-form button:disabled { background-color: #555; cursor: not-allowed; }
-.loader { text-align: center; font-size: 1.2em; padding: 2rem; }
-.breadcrumb { margin-bottom: 1rem; font-size: 1.1em; }
-.breadcrumb a { color: var(--secondary-color); }
-.breadcrumb span { color: var(--primary-color); }
-#mod-queue-container td { vertical-align: middle; }
-.wr-list { font-size: 0.9em; color: var(--secondary-color); list-style-type: none; padding-left: 0; }
-.error-message { color: var(--rejected-color); margin-top: 1rem; display: none; }
-.form-row { display: flex; gap: 0.5rem; }
-.form-row input { margin-top: 0.5rem; }
-#submission-form input, #submission-form select { margin-top: 0.5rem; }
-@media (max-width: 600px) { body { padding: 0.5rem; } h1 { font-size: 1.5rem; } h2 { font-size: 1.3rem; } .card h3 { font-size: 1.1rem; } td, th { padding: 0.5rem; } }
+:root {
+    --bg-color: #0a0a0a;
+    --text-color: #e0e0e0;
+    --table-bg: #000033;       /* Fundo da tabela (Azul escuro) */
+    --table-header: #000044;   /* Cabeçalho da tabela */
+    --star-color: #ffffff;     /* Cor do nome da estrela */
+    --accent-color: #6200ee;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* --- HEADER & NAV --- */
+header {
+    background: linear-gradient(to bottom, #000066, #000033);
+    border-bottom: 3px solid #444;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+h1 {
+    color: #2ecc71; /* Verde estilo Mario Singlestar */
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 2rem;
+    text-shadow: 2px 2px 4px #000;
+}
+
+nav {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.nav-btn {
+    background: transparent;
+    border: 1px solid #fff;
+    color: #fff;
+    padding: 5px 15px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+.nav-btn:hover { background: rgba(255,255,255,0.2); }
+
+/* --- CONTAINER PRINCIPAL --- */
+main {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 10px;
+}
+
+/* --- ESTRUTURA DA FASE (CARD) --- */
+.course-section {
+    margin-bottom: 2.5rem;
+    border: 2px solid #444;
+    background-color: var(--table-bg);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+}
+
+/* --- CABEÇALHO DA FASE (Listrado) --- */
+.course-header {
+    padding: 12px;
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: white;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 2px #000;
+    border-bottom: 2px solid #fff;
+
+    /* O Padrão Listrado Diagonal */
+    background-image: linear-gradient(
+        45deg, 
+        rgba(255, 255, 255, 0.15) 25%, 
+        transparent 25%, 
+        transparent 50%, 
+        rgba(255, 255, 255, 0.15) 50%, 
+        rgba(255, 255, 255, 0.15) 75%, 
+        transparent 75%, 
+        transparent
+    );
+    background-size: 30px 30px;
+}
+
+/* CORES DAS FASES (Baseado nas imagens) */
+.bg-bob { background-color: #228B22; } /* Verde */
+.bg-wf  { background-color: #696969; } /* Cinza */
+.bg-jrb { background-color: #004080; } /* Azul Escuro */
+.bg-ccm { background-color: #DAA520; } /* Ouro */
+.bg-bbh { background-color: #3E2723; } /* Marrom Escuro */
+.bg-hmc { background-color: #2E7D32; } /* Verde Escuro */
+.bg-lll { background-color: #8B0000; } /* Vermelho Sangue */
+.bg-ssl { background-color: #D35400; } /* Laranja Queimado */
+.bg-ddd { background-color: #1A5276; } /* Azul Oceano */
+.bg-sl  { background-color: #5F6A6A; } /* Cinza Gelo */
+.bg-wdw { background-color: #4A235A; } /* Roxo/Azul Escuro */
+.bg-ttm { background-color: #6E2C00; } /* Marrom Montanha */
+.bg-thi { background-color: #229954; } /* Verde Ilha */
+.bg-ttc { background-color: #9A7D0A; } /* Dourado Escuro */
+.bg-rr  { background-color: #633974; } /* Roxo/Rosa */
+.bg-bowser { background-color: #17202A; } /* Preto/Cinza */
+.bg-secret { background-color: #424949; } /* Cinza Metálico */
+
+/* --- TABELA --- */
+.table-responsive { overflow-x: auto; }
+
+.records-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.records-table th {
+    background-color: var(--table-header);
+    color: #fff;
+    padding: 10px;
+    border-bottom: 1px solid #555;
+    text-align: center;
+}
+
+.records-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #222;
+    color: #ddd;
+    text-align: center;
+}
+
+/* Nome da Estrela alinhado à esquerda e branco */
+.records-table td:first-child {
+    text-align: left;
+    color: var(--star-color);
+    width: 35%;
+}
+
+/* Linha Hover */
+.records-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* --- MODAL --- */
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
+.modal-content { background-color: #222; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; border: 1px solid #444; color: white; }
+.close-btn { float: right; font-size: 1.5rem; cursor: pointer; }
+input, select, button { width: 100%; padding: 10px; margin-top: 10px; background: #333; border: 1px solid #555; color: white; box-sizing: border-box; }
+button { background-color: var(--accent-color); border: none; font-weight: bold; cursor: pointer; }
+button:hover { opacity: 0.9; }
+
+/* Ajuste Mobile */
+@media (max-width: 600px) {
+    .course-header { font-size: 1.1rem; }
+    .records-table { font-size: 0.8rem; }
+}
