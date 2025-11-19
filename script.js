@@ -69,9 +69,7 @@ async function loadData() {
     } catch (err) { console.error(err); container.innerHTML = '<div style="text-align:center">Error loading data.</div>'; }
 }
 
-// --- SISTEMA DE VÍDEO (YOUTUBE + BILIBILI) ---
-
-// Detecta o tipo de vídeo e retorna o código de embed correto
+// --- SISTEMA DE VÍDEO UNIFICADO (YOUTUBE + BILIBILI) ---
 function getVideoEmbed(url) {
     if (!url) return null;
 
@@ -81,18 +79,17 @@ function getVideoEmbed(url) {
         return `<iframe src="https://www.youtube.com/embed/${ytMatch[2]}" frameborder="0" allowfullscreen></iframe>`;
     }
 
-    // 2. Bilibili (Suporta links curtos e completos)
-    // Regex busca por "/video/BV..."
-    const biliMatch = url.match(/bilibili\.com\/video\/(BV\w+)/);
+    // 2. Bilibili
+    // Tenta encontrar o padrão BV...
+    const biliMatch = url.match(/(BV\w+)/);
     if (biliMatch && biliMatch[1]) {
         const bvid = biliMatch[1];
-        // high_quality=1 para melhor resolução, danmaku=0 para esconder comentários da tela
-        return `<iframe src="//player.bilibili.com/player.html?bvid=${bvid}&page=1&high_quality=1&danmaku=0" frameborder="0" allowfullscreen></iframe>`;
+        // Player Bilibili sem autoplay
+        return `<iframe src="//player.bilibili.com/player.html?bvid=${bvid}&page=1&high_quality=1&danmaku=0" frameborder="0" allowfullscreen style="width:100%;height:100%"></iframe>`;
     }
 
-    return null; // Link inválido ou não suportado
+    return null; // Link não suportado
 }
-
 
 // --- MATEMÁTICA DE TEMPO ---
 function timeToSeconds(str) {
@@ -201,7 +198,7 @@ function renderTimeline() {
     });
 }
 
-// Função para abrir/fechar vídeo na timeline
+// Função para abrir/fechar vídeo na timeline (USANDO getVideoEmbed)
 window.toggleTimelineVideo = (runId, videoUrl) => {
     const container = document.getElementById(`vid-container-${runId}`);
     const btn = document.getElementById(`vid-btn-${runId}`);
@@ -219,7 +216,7 @@ window.toggleTimelineVideo = (runId, videoUrl) => {
             btn.classList.add('active');
             btn.innerHTML = '<i class="fas fa-times-circle"></i> Close Video';
         } else {
-            alert("Invalid video link or platform not supported (Only YouTube & Bilibili).");
+            alert("Invalid video link or platform not supported.");
         }
     }
 };
@@ -229,25 +226,16 @@ function getRecordTag(currentRun) {
     const previousRuns = GLOBAL_RUNS.filter(r => 
         r.courseId === currentRun.courseId && r.star === currentRun.star && r.date < currentRun.date
     );
-
     if (previousRuns.length === 0) return "[New]"; 
-
     previousRuns.sort((a, b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
     const prevBestIGT = previousRuns[0];
-
     const prevRunsRT = previousRuns.filter(r => r.rta && r.rta !== '-');
     prevRunsRT.sort((a, b) => timeToSeconds(a.rta) - timeToSeconds(b.rta));
     const prevBestRT = prevRunsRT.length > 0 ? prevRunsRT[0] : null;
-
     const beatIGT = timeToSeconds(currentRun.igt) < timeToSeconds(prevBestIGT.igt);
-    
     let beatRT = false;
-    if (prevBestRT && currentRun.rta && currentRun.rta !== '-') {
-        if (timeToSeconds(currentRun.rta) < timeToSeconds(prevBestRT.rta)) beatRT = true;
-    } else if (!prevBestRT && currentRun.rta && currentRun.rta !== '-') {
-        beatRT = true;
-    }
-
+    if (prevBestRT && currentRun.rta && currentRun.rta !== '-') { if (timeToSeconds(currentRun.rta) < timeToSeconds(prevBestRT.rta)) beatRT = true; } 
+    else if (!prevBestRT && currentRun.rta && currentRun.rta !== '-') { beatRT = true; }
     if (beatRT && beatIGT) return "[RT/IGT]";
     if (beatRT) return "[RT]";
     if (beatIGT) return "[IGT]";
@@ -256,89 +244,38 @@ function getRecordTag(currentRun) {
 
 function generateTimelineText(currentRun) {
     const previousRuns = GLOBAL_RUNS.filter(r => r.courseId === currentRun.courseId && r.star === currentRun.star && r.date < currentRun.date);
-
-    if (previousRuns.length === 0) {
-        return `<a href="#">@${currentRun.runner}</a> set the first record with <b>${currentRun.igt}</b> (RT: ${currentRun.rta})!`;
-    }
-
+    if (previousRuns.length === 0) return `<a href="#">@${currentRun.runner}</a> set the first record with <b>${currentRun.igt}</b> (RT: ${currentRun.rta})!`;
     previousRuns.sort((a, b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
     const prevBestIGT = previousRuns[0];
-    
     const prevRunsRT = previousRuns.filter(r => r.rta && r.rta !== '-');
     prevRunsRT.sort((a, b) => timeToSeconds(a.rta) - timeToSeconds(b.rta));
     const prevBestRT = prevRunsRT.length > 0 ? prevRunsRT[0] : null;
-
     const beatIGT = timeToSeconds(currentRun.igt) < timeToSeconds(prevBestIGT.igt);
     const igtDiff = calculateTimeDiff(prevBestIGT.igt, currentRun.igt);
-
     let beatRT = false;
     let rtDiff = "00\"00";
-    if (prevBestRT && currentRun.rta && currentRun.rta !== '-') {
-        if (timeToSeconds(currentRun.rta) < timeToSeconds(prevBestRT.rta)) {
-            beatRT = true;
-            rtDiff = calculateTimeDiff(prevBestRT.rta, currentRun.rta);
-        }
-    }
-
+    if (prevBestRT && currentRun.rta && currentRun.rta !== '-') { if (timeToSeconds(currentRun.rta) < timeToSeconds(prevBestRT.rta)) { beatRT = true; rtDiff = calculateTimeDiff(prevBestRT.rta, currentRun.rta); } }
     let text = "";
-
-    if (beatRT && beatIGT) {
-        text += `<a href="#">@${currentRun.runner}</a> beat the real time record and the best IGT with a <b>${currentRun.rta}</b> <span class="diff-neg">(-${rtDiff})</span> and <b>${currentRun.igt}</b> <span class="diff-neg">(-${igtDiff})</span>!`;
-    } else if (beatRT) {
-        text += `<a href="#">@${currentRun.runner}</a> beat the real time record with <b>${currentRun.rta}</b> <span class="diff-neg">(-${rtDiff})</span>!`;
-    } else if (beatIGT) {
-        text += `<a href="#">@${currentRun.runner}</a> beat the best IGT with a <b>${currentRun.igt}</b> <span class="diff-neg">(-${igtDiff})</span>!`;
-    } else {
-        text += `<a href="#">@${currentRun.runner}</a> completed this star in <b>${currentRun.igt}</b> (RT: ${currentRun.rta}).`;
-    }
-
-    if (beatRT && prevBestRT) {
-        const daysAgo = calculateDaysAgo(currentRun.date, prevBestRT.date);
-        text += `<br><br>The previous real time record was <b>${prevBestRT.rta}</b> by <a href="#">@${prevBestRT.runner}</a>. (Achieved: ${daysAgo} days ago)`;
-    }
-    
-    if (beatIGT) {
-        const daysAgo = calculateDaysAgo(currentRun.date, prevBestIGT.date);
-        const br = (beatRT && prevBestRT) ? "<br>" : "<br><br>";
-        text += `${br}The previous best IGT was <b>${prevBestIGT.igt}</b> by <a href="#">@${prevBestIGT.runner}</a>. (Achieved: ${daysAgo} days ago)`;
-    }
-
+    if (beatRT && beatIGT) { text += `<a href="#">@${currentRun.runner}</a> beat the real time record and the best IGT with a <b>${currentRun.rta}</b> <span class="diff-neg">(-${rtDiff})</span> and <b>${currentRun.igt}</b> <span class="diff-neg">(-${igtDiff})</span>!`; } 
+    else if (beatRT) { text += `<a href="#">@${currentRun.runner}</a> beat the real time record with <b>${currentRun.rta}</b> <span class="diff-neg">(-${rtDiff})</span>!`; } 
+    else if (beatIGT) { text += `<a href="#">@${currentRun.runner}</a> beat the best IGT with a <b>${currentRun.igt}</b> <span class="diff-neg">(-${igtDiff})</span>!`; } 
+    else { text += `<a href="#">@${currentRun.runner}</a> completed this star in <b>${currentRun.igt}</b> (RT: ${currentRun.rta}).`; }
+    if (beatRT && prevBestRT) { const daysAgo = calculateDaysAgo(currentRun.date, prevBestRT.date); text += `<br><br>The previous real time record was <b>${prevBestRT.rta}</b> by <a href="#">@${prevBestRT.runner}</a>. (Achieved: ${daysAgo} days ago)`; }
+    if (beatIGT) { const daysAgo = calculateDaysAgo(currentRun.date, prevBestIGT.date); const br = (beatRT && prevBestRT) ? "<br>" : "<br><br>"; text += `${br}The previous best IGT was <b>${prevBestIGT.igt}</b> by <a href="#">@${prevBestIGT.runner}</a>. (Achieved: ${daysAgo} days ago)`; }
     return text;
 }
 
 function calculateTimeDiff(oldTimeStr, newTimeStr) {
-    const t1 = timeToSeconds(oldTimeStr);
-    const t2 = timeToSeconds(newTimeStr);
-    const diff = Math.abs(t1 - t2);
-    
+    const t1 = timeToSeconds(oldTimeStr); const t2 = timeToSeconds(newTimeStr); const diff = Math.abs(t1 - t2);
     if(diff < 0.01) return '00"00';
-
-    let secs = Math.floor(diff);
-    let centis = Math.round((diff - secs) * 100);
-    
+    let secs = Math.floor(diff); let centis = Math.round((diff - secs) * 100);
     if (centis >= 100) { centis = 0; secs++; }
-
-    const sStr = secs < 10 ? "0" + secs : secs;
-    const cStr = centis < 10 ? "0" + centis : centis;
-
-    if (secs >= 60) {
-        let mins = Math.floor(secs / 60);
-        let restSecs = secs % 60;
-        const rsStr = restSecs < 10 ? "0" + restSecs : restSecs;
-        return `${mins}'${rsStr}"${cStr}`;
-    }
+    const sStr = secs < 10 ? "0" + secs : secs; const cStr = centis < 10 ? "0" + centis : centis;
+    if (secs >= 60) { let mins = Math.floor(secs / 60); let restSecs = secs % 60; const rsStr = restSecs < 10 ? "0" + restSecs : restSecs; return `${mins}'${rsStr}"${cStr}`; }
     return `${sStr}"${cStr}`;
 }
-
-function calculateDaysAgo(d1, d2) {
-    const diff = Math.abs(new Date(d1) - new Date(d2));
-    return Math.ceil(diff / (1000 * 60 * 60 * 24));
-}
-
-function getCoursesCode(id) {
-    const map = {'bob':'BoB','wf':'WF','jrb':'JRB','ccm':'CCM','bbh':'BBH','hmc':'HMC','lll':'LLL','ssl':'SSL','ddd':'DDD','sl':'SL','wdw':'WDW','ttm':'TTM','thi':'THI','ttc':'TTC','rr':'RR','bowser':'Bowser','secret':'Secret'};
-    return map[id] || id.toUpperCase();
-}
+function calculateDaysAgo(d1, d2) { const diff = Math.abs(new Date(d1) - new Date(d2)); return Math.ceil(diff / (1000 * 60 * 60 * 24)); }
+function getCoursesCode(id) { const map = {'bob':'BoB','wf':'WF','jrb':'JRB','ccm':'CCM','bbh':'BBH','hmc':'HMC','lll':'LLL','ssl':'SSL','ddd':'DDD','sl':'SL','wdw':'WDW','ttm':'TTM','thi':'THI','ttc':'TTC','rr':'RR','bowser':'Bowser','secret':'Secret'}; return map[id] || id.toUpperCase(); }
 
 // --- MOD QUEUE ---
 async function loadModQueue() {
@@ -346,16 +283,13 @@ async function loadModQueue() {
     if(!IS_MOD) return;
     const q = query(collection(db, "runs"), where("status", "==", "pending"));
     const snap = await getDocs(q);
-    
     PENDING_RUNS = []; 
-    
     if(snap.empty) { qList.innerHTML = '<p style="text-align:center;color:#777">No pending runs.</p>'; return; }
     let html = '';
     snap.forEach(doc => {
         const r = doc.data();
         const id = doc.id;
         PENDING_RUNS.push({ ...r, id: id });
-
         html += `
             <div class="mod-card" id="card-${id}">
                 <div class="mod-info">
@@ -372,19 +306,19 @@ async function loadModQueue() {
     qList.innerHTML = html;
 }
 
-// --- DETALHES DA ESTRELA ---
+// --- DETALHES DA ESTRELA (COM SUPORTE BILIBILI) ---
 window.openStarDetail = (cId, sName) => {
     window.switchView('detail');
     const content = document.getElementById('star-detail-content');
     const runs = GLOBAL_RUNS.filter(r => r.courseId === cId && r.star === sName);
     const cColor = COURSES.find(c => c.id === cId)?.color || 'bg-bob';
 
-    // WR para vídeo principal
     const runsIGT = [...runs].sort((a,b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
     const wr = runsIGT[0];
 
     let vidContent = '<p style="text-align:center;padding:20px;color:#777">No video available</p>';
-    // Usa a nova função getVideoEmbed
+    
+    // USA A NOVA FUNÇÃO UNIFICADA
     const embedHTML = getVideoEmbed(wr?.videoLink);
     if(embedHTML) {
         vidContent = embedHTML;
@@ -401,7 +335,6 @@ window.openStarDetail = (cId, sName) => {
 
     const igtHistory = [...runs].sort((a,b) => b.date.localeCompare(a.date));
     const igtTable = generateHistoryTable(igtHistory, "Best IGT History", "history-igt");
-    
     const rtHistory = runs.filter(r => r.rta && r.rta !== '-' && r.rta !== '').sort((a,b) => b.date.localeCompare(a.date));
     const rtTable = generateHistoryTable(rtHistory, "Best Real Time History", "history-rt");
 
@@ -414,7 +347,7 @@ window.openStarDetail = (cId, sName) => {
         </div>`;
 };
 
-// Função para trocar o vídeo ao clicar na tabela
+// Função para trocar o vídeo ao clicar na tabela (USANDO getVideoEmbed)
 window.changeVideo = (videoId, runner, time, isRT) => {
     const container = document.getElementById('main-video-display');
     const info = document.getElementById('video-info');
@@ -432,17 +365,13 @@ window.changeVideo = (videoId, runner, time, isRT) => {
 function generateHistoryTable(runs, title, cssClass) {
     let rows = '';
     const isRTTable = title.includes("Real Time");
-    
     runs.forEach(r => {
         const modBtns = IS_MOD ? `
             <td class="mod-controls" onclick="event.stopPropagation()">
                 <button class="btn-edit-sm" onclick="openEditModal('${r.id}')"><i class="fas fa-edit"></i></button>
                 <button class="btn-del-sm" onclick="deleteRun('${r.id}')"><i class="fas fa-trash"></i></button>
             </td>` : '';
-        
         const timeVal = isRTTable ? r.rta : r.igt;
-        
-        // Note o onclick chamando changeVideo
         rows += `
             <tr onclick="changeVideo('${r.videoLink}', '${r.runner}', '${timeVal}', ${isRTTable})">
                 <td>${formatDate(r.date)}</td>
@@ -465,11 +394,8 @@ function generateHistoryTable(runs, title, cssClass) {
 
 // --- EDIT & HELPERS ---
 window.openEditModal = (runId) => {
-    // Procura na lista Global (Verificadas) OU na lista Pendente
     let run = GLOBAL_RUNS.find(r => r.id === runId) || PENDING_RUNS.find(r => r.id === runId);
-    
     if(!run) { alert("Run data not found."); return; }
-    
     document.getElementById('edit-id').value = run.id;
     document.getElementById('edit-runner').value = run.runner;
     document.getElementById('edit-igt').value = run.igt;
@@ -492,12 +418,7 @@ window.handleEditSubmission = async (e) => {
         });
         alert("Run Updated!");
         window.closeModal('edit-run-modal');
-        
-        if (document.getElementById('view-mod').style.display === 'block') {
-            loadModQueue(); // Atualiza Mod Queue se estiver lá
-        } else {
-            loadData(); // Atualiza dados gerais
-        }
+        if (document.getElementById('view-mod').style.display === 'block') { loadModQueue(); } else { loadData(); }
     } catch(err) { alert("Error: " + err.message); }
 };
 
