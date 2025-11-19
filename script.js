@@ -4,7 +4,6 @@ import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https:/
 const db = window.db;
 const auth = window.auth;
 
-// Variáveis Globais
 let GLOBAL_RUNS = []; 
 let IS_MOD = false;
 
@@ -29,7 +28,6 @@ const COURSES = [
     { id: "bowser", name: "Bowser Courses", color: "bg-bowser", stars: ["Bowser in the Dark World Course", "Bowser in the Dark World Red Coins", "Bowser in the Dark World Battle", "Bowser in the Fire Sea Course", "Bowser in the Fire Sea Red Coins", "Bowser in the Fire Sea Battle", "Bowser in the Sky Course", "Bowser in the Sky Red Coins", "Bowser in the Sky Battle"] }
 ];
 
-// --- INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', () => {
     setupNavigation();
     setupModal();
@@ -37,146 +35,62 @@ document.addEventListener('DOMContentLoaded', () => {
     loadData(); 
 });
 
-// --- AUTH & MOD CHECK ---
+// --- AUTH ---
 function setupAuth() {
     onAuthStateChanged(auth, (user) => {
-        if (user) {
-            IS_MOD = true;
-            document.getElementById('mod-link').style.display = 'inline-block'; // Mostra aba mod
+        IS_MOD = !!user;
+        if (IS_MOD) {
+            document.getElementById('mod-link').style.display = 'inline-block';
             document.getElementById('login-btn-text').innerText = 'Logout';
-            document.querySelector('.login-btn').onclick = handleLogout;
-            loadModQueue(); // Carrega fila
+            document.querySelector('.login-btn').onclick = () => signOut(auth);
+            loadModQueue();
         } else {
-            IS_MOD = false;
             document.getElementById('mod-link').style.display = 'none';
             document.getElementById('login-btn-text').innerText = 'Mod Login';
             document.querySelector('.login-btn').onclick = window.openLoginModal;
-            switchView('courses'); // Se deslogar na aba mod, volta pra home
+            if(document.getElementById('view-mod').style.display === 'block') switchView('courses');
+        }
+        // Recarrega tabelas para mostrar/esconder botões de edição
+        renderCoursesTable();
+        if(document.getElementById('view-star-detail').style.display === 'block') {
+            // Tenta recarregar a view atual se possível (precisaria salvar estado, simplificado aqui)
+            switchView('courses'); 
         }
     });
 }
 
-// --- CARREGAR DADOS (Somente Verificados) ---
+// --- CARREGAR DADOS ---
 async function loadData() {
     const container = document.getElementById('courses-container');
     container.innerHTML = '<div style="color:white;text-align:center;padding:20px">Loading Records...</div>';
-
     try {
-        // Só carrega runs que foram aprovadas (status == 'verified')
         const q = query(collection(db, "runs"), where("status", "==", "verified"), orderBy("date", "desc"));
         const snapshot = await getDocs(q);
-        
         GLOBAL_RUNS = [];
-        snapshot.forEach(doc => {
-            const d = doc.data();
-            GLOBAL_RUNS.push({ ...d, id: doc.id });
-        });
-
+        snapshot.forEach(doc => GLOBAL_RUNS.push({ ...doc.data(), id: doc.id }));
         renderCoursesTable();
-
-    } catch (err) {
-        console.error("Erro:", err);
-        container.innerHTML = '<div style="color:red;text-align:center">Error loading data. <br>Make sure you deleted the old database collections.</div>';
-    }
+    } catch (err) { console.error(err); container.innerHTML = '<div style="text-align:center">Error loading data.</div>'; }
 }
 
-// --- CARREGAR FILA DE MODERAÇÃO (Somente Pendentes) ---
-async function loadModQueue() {
-    if (!IS_MOD) return;
-    const qList = document.getElementById('mod-queue-list');
-    qList.innerHTML = 'Loading pending runs...';
-
-    try {
-        const q = query(collection(db, "runs"), where("status", "==", "pending"));
-        const snapshot = await getDocs(q);
-        
-        if (snapshot.empty) {
-            qList.innerHTML = '<p style="text-align:center;color:#777">No pending runs.</p>';
-            return;
-        }
-
-        let html = '';
-        snapshot.forEach(doc => {
-            const r = doc.data();
-            html += `
-                <div class="mod-card" id="card-${doc.id}">
-                    <div class="mod-info">
-                        <h4 style="margin:0;color:#87CEEB">${r.courseId} - ${r.star}</h4>
-                        <p style="margin:5px 0;color:#ccc">
-                            Player: <b>${r.runner}</b> | IGT: <b>${r.igt}</b> | RTA: ${r.rta}<br>
-                            Date: ${r.date}<br>
-                            Video: <a href="${r.videoLink}" target="_blank" style="color:#2ecc71">Link</a>
-                        </p>
-                    </div>
-                    <div class="mod-actions">
-                        <button class="btn-approve" onclick="verifyRun('${doc.id}')">Approve</button>
-                        <button class="btn-reject" onclick="rejectRun('${doc.id}')">Reject</button>
-                    </div>
-                </div>
-            `;
-        });
-        qList.innerHTML = html;
-    } catch (e) {
-        console.error(e);
-        qList.innerHTML = 'Error loading queue.';
-    }
-}
-
-// --- AÇÕES DE MODERAÇÃO ---
-window.verifyRun = async (id) => {
-    if(!confirm("Approve this run?")) return;
-    try {
-        await updateDoc(doc(db, "runs", id), { status: "verified" });
-        document.getElementById(`card-${id}`).remove();
-        loadData(); // Atualiza a tabela principal
-    } catch (e) { alert("Error approving."); }
-};
-
-window.rejectRun = async (id) => {
-    if(!confirm("Reject (DELETE) this run?")) return;
-    try {
-        await deleteDoc(doc(db, "runs", id)); // Deleta para não poluir
-        document.getElementById(`card-${id}`).remove();
-    } catch (e) { alert("Error rejecting."); }
-};
-
-// --- NAVEGAÇÃO ---
-window.switchView = (viewName) => {
-    document.querySelectorAll('main > div').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-
-    if(viewName === 'courses') {
-        document.getElementById('view-courses').style.display = 'block';
-        renderCoursesTable();
-    } else if (viewName === 'timeline') {
-        document.getElementById('view-timeline').style.display = 'block';
-        renderTimeline();
-    } else if (viewName === 'mod') {
-        document.getElementById('view-mod').style.display = 'block';
-        loadModQueue();
-    }
-    
-    // Ativa link
-    const link = document.querySelector(`a[onclick="switchView('${viewName}')"]`);
-    if(link) link.classList.add('active');
-};
-
-function setupNavigation() { switchView('courses'); }
-
-// --- RENDERIZADORES (Home, Timeline, Detail) ---
+// --- RENDER HOME (COURSES) ---
 function renderCoursesTable() {
     const container = document.getElementById('courses-container');
     container.innerHTML = '';
-
     COURSES.forEach(course => {
         let rows = '';
         course.stars.forEach(starName => {
             const starRuns = GLOBAL_RUNS.filter(r => r.courseId === course.id && r.star === starName);
-            // Ordena por IGT (String compare simples)
             starRuns.sort((a, b) => a.igt.localeCompare(b.igt));
             const wr = starRuns[0];
-
+            
             if (wr) {
+                // Botões de mod se logado
+                const modBtns = IS_MOD ? `
+                    <td class="mod-controls">
+                        <button class="btn-edit-sm" onclick="event.stopPropagation(); openEditModal('${wr.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn-del-sm" onclick="event.stopPropagation(); deleteRun('${wr.id}')"><i class="fas fa-trash"></i></button>
+                    </td>` : '';
+
                 rows += `
                 <tr onclick="openStarDetail('${course.id}', '${starName}')">
                     <td>${starName}</td>
@@ -184,18 +98,20 @@ function renderCoursesTable() {
                     <td>${wr.rta}</td>
                     <td>${wr.igt}</td>
                     <td>${formatDate(wr.date)}</td>
+                    ${IS_MOD ? modBtns : ''}
                 </tr>`;
             } else {
-                rows += `<tr><td>${starName}</td><td colspan="4" style="color:#555">-</td></tr>`;
+                rows += `<tr><td>${starName}</td><td colspan="${IS_MOD ? 5 : 4}" style="color:#555">-</td></tr>`;
             }
         });
-
+        
+        const headerCols = IS_MOD ? '<th>Action</th>' : '';
         container.innerHTML += `
             <div class="course-section">
                 <div class="course-header ${course.color}">${course.name}</div>
                 <div class="table-responsive">
                     <table class="records-table">
-                        <thead><tr><th>Star</th><th>Player</th><th>RT</th><th>IGT</th><th>Date</th></tr></thead>
+                        <thead><tr><th>Star</th><th>Player</th><th>RT</th><th>IGT</th><th>Date</th>${headerCols}</tr></thead>
                         <tbody>${rows}</tbody>
                     </table>
                 </div>
@@ -203,29 +119,9 @@ function renderCoursesTable() {
     });
 }
 
-function renderTimeline() {
-    const feed = document.getElementById('timeline-feed');
-    feed.innerHTML = '';
-    const recent = GLOBAL_RUNS.slice(0, 50); // Já está ordenado por data no loadData
-    
-    if(recent.length === 0) { feed.innerHTML = '<p style="text-align:center">No verified runs yet.</p>'; return; }
-
-    recent.forEach(r => {
-        const cName = COURSES.find(c => c.id === r.courseId)?.name || r.courseId;
-        feed.innerHTML += `
-            <div class="timeline-card">
-                <div class="timeline-icon"><i class="fas fa-trophy"></i></div>
-                <div class="timeline-content">
-                    <h4>[New WR] ${cName}</h4>
-                    <p><span class="highlight">${r.runner}</span> - ${r.star}<br>Time: <b>${r.igt}</b> (RT: ${r.rta})</p>
-                    <div class="timeline-date">${formatDate(r.date)}</div>
-                </div>
-            </div>`;
-    });
-}
-
+// --- RENDER DETAIL VIEW (2 TABLES: RT & IGT) ---
 window.openStarDetail = (cId, sName) => {
-    window.switchView('detail'); // Hack simples, ou use display none manuais
+    window.switchView('detail');
     document.getElementById('view-courses').style.display = 'none';
     document.getElementById('view-timeline').style.display = 'none';
     document.getElementById('view-mod').style.display = 'none';
@@ -233,96 +129,195 @@ window.openStarDetail = (cId, sName) => {
 
     const content = document.getElementById('star-detail-content');
     const runs = GLOBAL_RUNS.filter(r => r.courseId === cId && r.star === sName);
-    
-    // WR para vídeo (menor tempo)
-    const wr = [...runs].sort((a,b) => a.igt.localeCompare(b.igt))[0];
-    // Histórico (data decrescente)
-    const history = [...runs].sort((a,b) => b.date.localeCompare(a.date));
-    
     const cColor = COURSES.find(c => c.id === cId)?.color || 'bg-bob';
+
+    // 1. Achar WR por IGT (para o vídeo principal)
+    const wr = [...runs].sort((a,b) => a.igt.localeCompare(b.igt))[0];
     
-    let vidHtml = '<p style="text-align:center;padding:20px">No video</p>';
+    // 2. Vídeo
+    let vidHtml = '<p style="text-align:center;padding:20px;color:#777">No video available</p>';
     if(wr && wr.videoLink) {
-        const yId = wr.videoLink.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/)([^#&?]*))/)?.[1];
+        const yId = getYoutubeId(wr.videoLink);
         if(yId) vidHtml = `<div class="video-container"><iframe src="https://www.youtube.com/embed/${yId}" frameborder="0" allowfullscreen></iframe></div>`;
     }
 
-    let rows = '';
-    history.forEach(r => {
-        rows += `<tr><td>${formatDate(r.date)}</td><td>${r.runner}</td><td>${r.rta}</td><td>${r.igt}</td></tr>`;
-    });
+    // 3. Gerar Tabela IGT (Best IGT History) - Ordenado por Data desc
+    const igtHistory = [...runs].sort((a,b) => b.date.localeCompare(a.date));
+    const igtTable = generateHistoryTable(igtHistory, "Best IGT History", "history-igt");
+
+    // 4. Gerar Tabela RT (Best Real Time History) - Ordenado por Data desc
+    // (Mesmos dados, mas em tabela separada visualmente como pedido)
+    const rtTable = generateHistoryTable(igtHistory, "Best Real Time History", "history-rt");
 
     content.innerHTML = `
         <div class="course-section" style="background:none;border:none;box-shadow:none">
             <div class="detail-header ${cColor}">${sName}</div>
             ${vidHtml}
-            <div class="history-header">History</div>
-            <div class="table-responsive">
-                <table class="records-table">
-                    <thead><tr><th>Date</th><th>Player</th><th>RT</th><th>IGT</th></tr></thead>
-                    <tbody>${rows || '<tr><td colspan="4">No records</td></tr>'}</tbody>
-                </table>
-            </div>
+            ${rtTable}
+            ${igtTable}
         </div>`;
 };
 
-// --- MODAL, LOGIN & SUBMIT ---
+function generateHistoryTable(runs, title, cssClass) {
+    let rows = '';
+    runs.forEach(r => {
+        const modBtns = IS_MOD ? `
+            <td class="mod-controls">
+                <button class="btn-edit-sm" onclick="openEditModal('${r.id}')"><i class="fas fa-edit"></i></button>
+                <button class="btn-del-sm" onclick="deleteRun('${r.id}')"><i class="fas fa-trash"></i></button>
+            </td>` : '';
+            
+        rows += `<tr><td>${formatDate(r.date)}</td><td>${r.runner}</td><td>${r.rta}</td><td>${r.igt}</td>${IS_MOD ? modBtns : ''}</tr>`;
+    });
+
+    const headerCols = IS_MOD ? '<th>Action</th>' : '';
+    return `
+        <div class="history-section-header ${cssClass}">${title}</div>
+        <div class="table-responsive">
+            <table class="records-table">
+                <thead><tr><th>Date</th><th>Player</th><th>RT</th><th>IGT</th>${headerCols}</tr></thead>
+                <tbody>${rows || '<tr><td colspan="5">No records</td></tr>'}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+// --- EDIT RUN LOGIC ---
+window.openEditModal = (runId) => {
+    const run = GLOBAL_RUNS.find(r => r.id === runId);
+    if(!run) return;
+    document.getElementById('edit-id').value = run.id;
+    document.getElementById('edit-runner').value = run.runner;
+    document.getElementById('edit-igt').value = run.igt;
+    document.getElementById('edit-rta').value = run.rta;
+    document.getElementById('edit-date').value = run.date;
+    document.getElementById('edit-videoLink').value = run.videoLink;
+    document.getElementById('edit-run-modal').style.display = 'flex';
+};
+
+window.handleEditSubmission = async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-id').value;
+    try {
+        await updateDoc(doc(db, "runs", id), {
+            runner: document.getElementById('edit-runner').value,
+            igt: document.getElementById('edit-igt').value,
+            rta: document.getElementById('edit-rta').value,
+            date: document.getElementById('edit-date').value,
+            videoLink: document.getElementById('edit-videoLink').value
+        });
+        alert("Run Updated!");
+        window.closeModal('edit-run-modal');
+        loadData();
+    } catch(err) { alert("Error updating: " + err.message); }
+};
+
+window.deleteRun = async (id) => {
+    if(confirm("Are you sure you want to DELETE this run permanently?")) {
+        try { await deleteDoc(doc(db, "runs", id)); loadData(); } 
+        catch(e) { alert("Error deleting."); }
+    }
+};
+
+// --- MOD QUEUE & TIMELINE (Mantidos) ---
+async function loadModQueue() {
+    const qList = document.getElementById('mod-queue-list');
+    if(!IS_MOD) return;
+    const q = query(collection(db, "runs"), where("status", "==", "pending"));
+    const snap = await getDocs(q);
+    if(snap.empty) { qList.innerHTML = '<p style="text-align:center;color:#777">No pending runs.</p>'; return; }
+    let html = '';
+    snap.forEach(doc => {
+        const r = doc.data();
+        html += `
+            <div class="mod-card" id="card-${doc.id}">
+                <div class="mod-info">
+                    <h4 style="color:#87CEEB">${r.courseId} - ${r.star}</h4>
+                    <p>Player: <b>${r.runner}</b> | IGT: ${r.igt}<br>Link: <a href="${r.videoLink}" target="_blank">Video</a></p>
+                </div>
+                <div class="mod-actions">
+                    <button class="btn-approve" onclick="verifyRun('${doc.id}')">Approve</button>
+                    <button class="btn-reject" onclick="rejectRun('${doc.id}')">Reject</button>
+                </div>
+            </div>`;
+    });
+    qList.innerHTML = html;
+}
+
+window.verifyRun = async (id) => { await updateDoc(doc(db, "runs", id), { status: "verified" }); document.getElementById(`card-${id}`).remove(); loadData(); };
+window.rejectRun = async (id) => { await deleteDoc(doc(db, "runs", id)); document.getElementById(`card-${id}`).remove(); };
+
+function renderTimeline() {
+    const feed = document.getElementById('timeline-feed');
+    feed.innerHTML = '';
+    const recent = GLOBAL_RUNS.slice(0, 50);
+    if(recent.length === 0) { feed.innerHTML = '<p style="text-align:center">No runs.</p>'; return; }
+    recent.forEach(r => {
+        const modBtns = IS_MOD ? `<button class="btn-edit-sm" onclick="openEditModal('${r.id}')" style="float:right;margin-left:10px">Edit</button>` : '';
+        feed.innerHTML += `
+            <div class="timeline-card">
+                <div class="timeline-icon"><i class="fas fa-trophy"></i></div>
+                <div class="timeline-content">
+                    ${modBtns}
+                    <h4>${r.star}</h4>
+                    <p><span class="highlight">${r.runner}</span> - <b>${r.igt}</b> (RT: ${r.rta})</p>
+                    <div class="timeline-date">${formatDate(r.date)}</div>
+                </div>
+            </div>`;
+    });
+}
+
+// --- HELPERS & MODALS ---
+function getYoutubeId(url) {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+}
+
+window.switchView = (v) => {
+    document.querySelectorAll('main > div').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+    document.getElementById(`view-${v === 'detail' ? 'star-detail' : v}`).style.display = 'block';
+    const link = document.querySelector(`a[onclick="switchView('${v}')"]`);
+    if(link) link.classList.add('active');
+    if(v === 'mod') loadModQueue();
+    if(v === 'timeline') renderTimeline();
+};
+
+function setupNavigation() { switchView('courses'); }
 function setupModal() {
     window.openSubmissionModal = () => {
-        const sel = document.getElementById('course-select');
-        sel.innerHTML = '<option value="">Select Course</option>';
-        COURSES.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.id; opt.textContent = c.name;
-            sel.appendChild(opt);
-        });
+        const s = document.getElementById('course-select'); s.innerHTML = '<option value="">Select Course</option>';
+        COURSES.forEach(c => s.appendChild(new Option(c.name, c.id)));
         document.getElementById('submission-modal').style.display = 'flex';
     };
-    document.getElementById('course-select').addEventListener('change', (e) => {
-        const sSel = document.getElementById('star-select');
-        sSel.innerHTML = '<option value="">Select Star</option>'; sSel.disabled = true;
+    document.getElementById('course-select').onchange = (e) => {
+        const ss = document.getElementById('star-select'); ss.innerHTML = '<option value="">Select Star</option>'; ss.disabled = true;
         const c = COURSES.find(x => x.id === e.target.value);
-        if(c) { sSel.disabled = false; c.stars.forEach(s => sSel.appendChild(new Option(s, s))); }
-    });
+        if(c) { ss.disabled = false; c.stars.forEach(st => ss.appendChild(new Option(st, st))); }
+    };
     window.closeModal = (id) => document.getElementById(id).style.display = 'none';
     window.openLoginModal = () => document.getElementById('login-modal').style.display = 'flex';
 }
 
-window.handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-        await signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('password').value);
-        window.closeModal('login-modal');
-    } catch (err) { alert("Login failed: " + err.message); }
-};
-
-const handleLogout = () => signOut(auth);
+window.handleLogin = async (e) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('password').value); window.closeModal('login-modal'); } catch (err) { alert(err.message); } };
 
 window.handleRunSubmission = async (e) => {
     e.preventDefault();
-    const btn = document.getElementById('submit-run-button');
-    btn.innerText = "Sending..."; btn.disabled = true;
-    
+    const btn = document.getElementById('submit-run-button'); btn.disabled = true; btn.innerText = "Sending...";
     const data = {
         courseId: document.getElementById('course-select').value,
         star: document.getElementById('star-select').value,
         runner: document.getElementById('runner').value,
         igt: document.getElementById('igt').value,
         rta: document.getElementById('rta').value || "-",
-        // Version removido
         date: document.getElementById('date').value,
         videoLink: document.getElementById('videoLink').value,
-        status: "pending", // IMPORTANTE: Começa como pendente
-        submittedAt: new Date().toISOString()
+        status: "pending", submittedAt: new Date().toISOString()
     };
-
-    try {
-        await addDoc(collection(db, "runs"), data);
-        alert("Run submitted for moderation!");
-        window.closeModal('submission-modal');
-        document.getElementById('submission-form').reset();
-    } catch(err) { alert("Error."); console.error(err); }
-    btn.innerText = "Submit Run"; btn.disabled = false;
+    try { await addDoc(collection(db, "runs"), data); alert("Submitted!"); window.closeModal('submission-modal'); document.getElementById('submission-form').reset(); } catch(err) { alert("Error"); }
+    btn.disabled = false; btn.innerText = "Submit Run";
 };
 
 function formatDate(d) { if(!d)return""; const p=d.split('-'); return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d; }
