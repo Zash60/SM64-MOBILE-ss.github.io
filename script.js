@@ -104,7 +104,7 @@ async function loadModQueue() {
                         <h4 style="margin:0;color:#87CEEB">${r.courseId} - ${r.star}</h4>
                         <p style="margin:5px 0;color:#ccc">
                             Player: <b>${r.runner}</b> | IGT: <b>${r.igt}</b> | RTA: ${r.rta}<br>
-                            Date: ${r.date} | Ver: ${r.version}<br>
+                            Date: ${r.date}<br>
                             Video: <a href="${r.videoLink}" target="_blank" style="color:#2ecc71">Link</a>
                         </p>
                     </div>
@@ -183,11 +183,10 @@ function renderCoursesTable() {
                     <td>${wr.runner}</td>
                     <td>${wr.rta}</td>
                     <td>${wr.igt}</td>
-                    <td>${wr.version}</td>
                     <td>${formatDate(wr.date)}</td>
                 </tr>`;
             } else {
-                rows += `<tr><td>${starName}</td><td colspan="5" style="color:#555">-</td></tr>`;
+                rows += `<tr><td>${starName}</td><td colspan="4" style="color:#555">-</td></tr>`;
             }
         });
 
@@ -196,7 +195,7 @@ function renderCoursesTable() {
                 <div class="course-header ${course.color}">${course.name}</div>
                 <div class="table-responsive">
                     <table class="records-table">
-                        <thead><tr><th>Star</th><th>Player</th><th>RT</th><th>IGT</th><th>Ver</th><th>Date</th></tr></thead>
+                        <thead><tr><th>Star</th><th>Player</th><th>RT</th><th>IGT</th><th>Date</th></tr></thead>
                         <tbody>${rows}</tbody>
                     </table>
                 </div>
@@ -250,7 +249,7 @@ window.openStarDetail = (cId, sName) => {
 
     let rows = '';
     history.forEach(r => {
-        rows += `<tr><td>${formatDate(r.date)}</td><td>${r.runner}</td><td>${r.rta}</td><td>${r.igt}</td><td>${r.version}</td></tr>`;
+        rows += `<tr><td>${formatDate(r.date)}</td><td>${r.runner}</td><td>${r.rta}</td><td>${r.igt}</td></tr>`;
     });
 
     content.innerHTML = `
@@ -260,8 +259,8 @@ window.openStarDetail = (cId, sName) => {
             <div class="history-header">History</div>
             <div class="table-responsive">
                 <table class="records-table">
-                    <thead><tr><th>Date</th><th>Player</th><th>RT</th><th>IGT</th><th>Ver</th></tr></thead>
-                    <tbody>${rows || '<tr><td colspan="5">No records</td></tr>'}</tbody>
+                    <thead><tr><th>Date</th><th>Player</th><th>RT</th><th>IGT</th></tr></thead>
+                    <tbody>${rows || '<tr><td colspan="4">No records</td></tr>'}</tbody>
                 </table>
             </div>
         </div>`;
@@ -310,7 +309,7 @@ window.handleRunSubmission = async (e) => {
         runner: document.getElementById('runner').value,
         igt: document.getElementById('igt').value,
         rta: document.getElementById('rta').value || "-",
-        version: document.getElementById('version').value || "1.0",
+        // Version removido
         date: document.getElementById('date').value,
         videoLink: document.getElementById('videoLink').value,
         status: "pending", // IMPORTANTE: Começa como pendente
