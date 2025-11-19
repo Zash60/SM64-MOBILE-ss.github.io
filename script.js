@@ -49,7 +49,6 @@ function setupAuth() {
             document.querySelector('.login-btn').onclick = window.openLoginModal;
             if(document.getElementById('view-mod').style.display === 'block') switchView('courses');
         }
-        // Atualiza as telas para mostrar botões
         if(document.getElementById('view-courses').style.display === 'block') renderCoursesTable();
         if(document.getElementById('view-timeline').style.display === 'block') renderTimeline();
         if(document.getElementById('view-mod').style.display === 'block') loadModQueue();
@@ -69,19 +68,42 @@ async function loadData() {
     } catch (err) { console.error(err); container.innerHTML = '<div style="text-align:center">Error loading data.</div>'; }
 }
 
+// --- FUNÇÃO MATEMÁTICA DE TEMPO (A CORREÇÃO PRINCIPAL) ---
+function timeToSeconds(str) {
+    if(!str || str === '-' || str === '') return 9999999; // Valor alto para ir pro final
+    
+    // Normaliza: Troca ' e " por : e .
+    let clean = str.trim().replace(/'/g, ':').replace(/"/g, '.');
+    
+    // Se tiver formato 30"29 (que vira 30.29), retorna float direto
+    if (!clean.includes(':')) {
+        return parseFloat(clean);
+    }
+
+    // Se tiver formato 1:18.23 (Minutos:Segundos.Centesimos)
+    let parts = clean.split(':');
+    if(parts.length === 2) {
+        return parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+    }
+    
+    return parseFloat(clean);
+}
+
 // --- RENDER HOME (COURSES) ---
 function renderCoursesTable() {
     const container = document.getElementById('courses-container');
     container.innerHTML = '';
+    
     COURSES.forEach(course => {
         let rows = '';
         course.stars.forEach(starName => {
             const starRuns = GLOBAL_RUNS.filter(r => r.courseId === course.id && r.star === starName);
-            starRuns.sort((a, b) => a.igt.localeCompare(b.igt));
-            const wr = starRuns[0];
             
-            // CORREÇÃO 1: Adiciona onclick na TR inteira, mesmo sem WR, para abrir detalhes vazio
-            // Botões de mod
+            // ORDENAÇÃO MATEMÁTICA: Menor tempo (IGT) primeiro
+            starRuns.sort((a, b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
+            
+            const wr = starRuns[0]; // O primeiro é sempre o melhor tempo
+            
             const modBtns = (IS_MOD && wr) ? `
                 <td class="mod-controls">
                     <button class="btn-edit-sm" onclick="event.stopPropagation(); openEditModal('${wr.id}')"><i class="fas fa-edit"></i></button>
@@ -99,7 +121,6 @@ function renderCoursesTable() {
                     ${modBtns}
                 </tr>`;
             } else {
-                // Linha vazia mas clicável
                 rows += `
                 <tr onclick="openStarDetail('${course.id}', '${starName}')">
                     <td>${starName}</td>
@@ -122,20 +143,16 @@ function renderCoursesTable() {
     });
 }
 
-// --- TIMELINE AVANÇADA (TEXTO ESTILO FOTO) ---
+// --- TIMELINE ---
 function renderTimeline() {
     const feed = document.getElementById('timeline-feed');
     feed.innerHTML = '';
-    // Pega os 50 mais recentes
     const recent = GLOBAL_RUNS.slice(0, 50);
     
     if(recent.length === 0) { feed.innerHTML = '<p style="text-align:center">No runs.</p>'; return; }
 
     recent.forEach(run => {
-        // Gera o texto comparativo
         const textHTML = generateTimelineText(run);
-        
-        // Botões de Mod na Timeline
         const modBtns = IS_MOD ? `
             <div style="min-width:60px; text-align:right;">
                 <button class="btn-edit-sm" onclick="openEditModal('${run.id}')"><i class="fas fa-edit"></i></button>
@@ -144,127 +161,126 @@ function renderTimeline() {
 
         feed.innerHTML += `
             <div class="timeline-card">
-                <div class="timeline-icon"><i class="fas fa-trophy"></i></div>
-                <div class="timeline-content" style="width:100%">
+                <div class="timeline-icon-container">
+                    <i class="fas fa-trophy timeline-icon"></i>
+                </div>
+                <div class="timeline-content">
                     <div class="timeline-header-row">
                         <h4 style="color:#fff; margin:0;">[IGT] ${getCoursesCode(run.courseId)} - ${run.star}</h4>
                         ${modBtns}
                     </div>
-                    <div class="timeline-date" style="margin-bottom:5px; margin-top:0;">${formatDate(run.date)}</div>
-                    <div class="timeline-text">
-                        ${textHTML}
-                    </div>
+                    <div class="timeline-date">${formatDate(run.date)}</div>
+                    <div class="timeline-text">${textHTML}</div>
                 </div>
             </div>`;
     });
 }
 
-// --- LÓGICA DE GERAÇÃO DE TEXTO DA TIMELINE ---
+// --- LÓGICA DE TEXTO DA TIMELINE ---
 function generateTimelineText(currentRun) {
-    // 1. Achar runs anteriores dessa mesma estrela e fase
     const previousRuns = GLOBAL_RUNS.filter(r => 
         r.courseId === currentRun.courseId && 
         r.star === currentRun.star && 
-        r.date < currentRun.date // Somente datas anteriores
+        r.date < currentRun.date // Apenas datas anteriores
     );
 
     if (previousRuns.length === 0) {
-        // Primeiro recorde de todos
         return `<a href="#">@${currentRun.runner}</a> set the first record with <b>${currentRun.igt}</b> (RT: ${currentRun.rta})!`;
     }
 
-    // 2. Achar o melhor IGT e Melhor RT ANTES dessa run
-    // Ordena por IGT asc
-    previousRuns.sort((a, b) => a.igt.localeCompare(b.igt));
+    // Ordena anteriores matematicamente
+    previousRuns.sort((a, b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
     const prevBestIGT = previousRuns[0];
     
-    // Ordena por RT asc (tratando "-" como infinito)
-    previousRuns.sort((a, b) => {
-        if (a.rta === '-' || !a.rta) return 1;
-        if (b.rta === '-' || !b.rta) return -1;
-        return a.rta.localeCompare(b.rta);
-    });
-    const prevBestRT = previousRuns[0];
+    // Ordena RT anteriores matematicamente
+    const prevRunsRT = previousRuns.filter(r => r.rta && r.rta !== '-' && r.rta !== '');
+    prevRunsRT.sort((a, b) => timeToSeconds(a.rta) - timeToSeconds(b.rta));
+    const prevBestRT = prevRunsRT.length > 0 ? prevRunsRT[0] : null;
 
-    // 3. Calcular Diferenças
+    // Comparação Atual
+    const currIGTVal = timeToSeconds(currentRun.igt);
+    const prevIGTVal = timeToSeconds(prevBestIGT.igt);
+    
+    // Bateu o recorde? (Menor que o anterior)
+    const beatIGT = currIGTVal < prevIGTVal;
     const igtDiff = calculateTimeDiff(prevBestIGT.igt, currentRun.igt);
+
+    let beatRT = false;
+    let rtDiff = "00\"00";
+    if (prevBestRT && currentRun.rta && currentRun.rta !== '-') {
+        const currRTVal = timeToSeconds(currentRun.rta);
+        const prevRTVal = timeToSeconds(prevBestRT.rta);
+        if (currRTVal < prevRTVal) {
+            beatRT = true;
+            rtDiff = calculateTimeDiff(prevBestRT.rta, currentRun.rta);
+        }
+    }
+
     let text = "";
 
-    // Verifica se bateu RT e IGT
-    const beatIGT = currentRun.igt < prevBestIGT.igt;
-    const beatRT = (currentRun.rta !== '-' && prevBestRT.rta !== '-') && (currentRun.rta < prevBestRT.rta);
-    
     if (beatRT && beatIGT) {
-        const rtDiff = calculateTimeDiff(prevBestRT.rta, currentRun.rta);
         text += `<a href="#">@${currentRun.runner}</a> beat the real time record and the best IGT with a <b>${currentRun.rta}</b> <span class="diff-neg">(-${rtDiff})</span> and <b>${currentRun.igt}</b> <span class="diff-neg">(-${igtDiff})</span>!`;
     } else if (beatIGT) {
         text += `<a href="#">@${currentRun.runner}</a> beat the best IGT with a <b>${currentRun.igt}</b> <span class="diff-neg">(-${igtDiff})</span>!`;
     } else {
-        // Apenas submit normal ou pior
-        return `<a href="#">@${currentRun.runner}</a> completed this star in <b>${currentRun.igt}</b> (RT: ${currentRun.rta}).`;
+        // Se for pior, apenas mostra que completou
+        text += `<a href="#">@${currentRun.runner}</a> completed this star in <b>${currentRun.igt}</b> (RT: ${currentRun.rta}).`;
     }
 
-    text += `<br><br>`;
-
-    // Linha sobre o recorde anterior
-    if (beatRT) {
-        const daysAgo = calculateDaysAgo(currentRun.date, prevBestRT.date);
-        text += `The previous real time record was <b>${prevBestRT.rta}</b> by <a href="#">@${prevBestRT.runner}</a>. (Achieved: ${daysAgo} days ago)<br>`;
-    }
-    
-    if (beatIGT) {
-        const daysAgo = calculateDaysAgo(currentRun.date, prevBestIGT.date);
-        text += `The previous best IGT was <b>${prevBestIGT.igt}</b> by <a href="#">@${prevBestIGT.runner}</a>. (Achieved: ${daysAgo} days ago)`;
+    // Se bateu recorde, mostra quem era o anterior
+    if (beatRT || beatIGT) {
+        text += `<br><br>`;
+        if (beatRT && prevBestRT) {
+            const daysAgo = calculateDaysAgo(currentRun.date, prevBestRT.date);
+            text += `The previous real time record was <b>${prevBestRT.rta}</b> by <a href="#">@${prevBestRT.runner}</a>. (Achieved: ${daysAgo} days ago)<br>`;
+        }
+        if (beatIGT) {
+            const daysAgo = calculateDaysAgo(currentRun.date, prevBestIGT.date);
+            text += `The previous best IGT was <b>${prevBestIGT.igt}</b> by <a href="#">@${prevBestIGT.runner}</a>. (Achieved: ${daysAgo} days ago)`;
+        }
     }
 
     return text;
 }
 
-// Utilitários Matemáticos para Timeline
-function timeToSeconds(timeStr) {
-    // Formatos esperados: "1:20.30", "30.50", "1'20"30"
-    if (!timeStr || timeStr === '-') return 999999;
-    let clean = timeStr.replace(/"/g, '.').replace(/'/g, ':');
-    let parts = clean.split(':');
-    let seconds = 0;
-    if (parts.length === 2) {
-        seconds = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
-    } else {
-        seconds = parseFloat(parts[0]);
+function calculateTimeDiff(oldTimeStr, newTimeStr) {
+    const t1 = timeToSeconds(oldTimeStr);
+    const t2 = timeToSeconds(newTimeStr);
+    const diff = Math.abs(t1 - t2);
+    
+    // Formata a diferença
+    let secs = Math.floor(diff);
+    let centis = Math.round((diff - secs) * 100);
+    
+    if (centis >= 100) { centis = 0; secs++; }
+
+    const sStr = secs < 10 ? "0" + secs : secs;
+    const cStr = centis < 10 ? "0" + centis : centis;
+
+    // Se tiver minutos
+    if (secs >= 60) {
+        let mins = Math.floor(secs / 60);
+        let restSecs = secs % 60;
+        const rsStr = restSecs < 10 ? "0" + restSecs : restSecs;
+        return `${mins}'${rsStr}"${cStr}`;
     }
-    return seconds;
+
+    return `${sStr}"${cStr}`;
 }
 
-function calculateTimeDiff(oldTime, newTime) {
-    const oldS = timeToSeconds(oldTime);
-    const newS = timeToSeconds(newTime);
-    const diff = oldS - newS;
-    
-    // Formata de volta 00"00
-    let totalSec = Math.abs(diff);
-    let min = Math.floor(totalSec / 60);
-    let sec = (totalSec % 60).toFixed(2);
-    if (sec < 10) sec = "0" + sec;
-    let minStr = min < 10 ? "0" + min : min;
-    
-    return `${minStr}"${sec}`; // Formato pedido: 00"00
-}
-
-function calculateDaysAgo(currentDate, oldDate) {
-    const d1 = new Date(currentDate);
-    const d2 = new Date(oldDate);
-    const diffTime = Math.abs(d1 - d2);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    return diffDays;
+function calculateDaysAgo(d1, d2) {
+    const date1 = new Date(d1);
+    const date2 = new Date(d2);
+    const diff = Math.abs(date1 - date2);
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
 function getCoursesCode(id) {
-    // Retorna sigla da fase (ex: bob -> BoB)
     const map = {'bob':'BoB','wf':'WF','jrb':'JRB','ccm':'CCM','bbh':'BBH','hmc':'HMC','lll':'LLL','ssl':'SSL','ddd':'DDD','sl':'SL','wdw':'WDW','ttm':'TTM','thi':'THI','ttc':'TTC','rr':'RR','bowser':'Bowser','secret':'Secret'};
     return map[id] || id.toUpperCase();
 }
 
-// --- MOD QUEUE (COM BOTÕES DE EDITAR) ---
+// --- MOD QUEUE ---
 async function loadModQueue() {
     const qList = document.getElementById('mod-queue-list');
     if(!IS_MOD) return;
@@ -290,14 +306,17 @@ async function loadModQueue() {
     qList.innerHTML = html;
 }
 
-// --- FUNÇÕES PADRÃO (DETAIL, EDIT, DELETE) ---
+// --- DETALHES DA ESTRELA ---
 window.openStarDetail = (cId, sName) => {
     window.switchView('detail');
     const content = document.getElementById('star-detail-content');
     const runs = GLOBAL_RUNS.filter(r => r.courseId === cId && r.star === sName);
     const cColor = COURSES.find(c => c.id === cId)?.color || 'bg-bob';
 
-    const wr = [...runs].sort((a,b) => a.igt.localeCompare(b.igt))[0];
+    // Acha o WR (Matemático)
+    const runsIGT = [...runs].sort((a,b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
+    const wr = runsIGT[0];
+
     let vidHtml = '<p style="text-align:center;padding:20px;color:#777">No video available</p>';
     if(wr && wr.videoLink) {
         const yId = getYoutubeId(wr.videoLink);
@@ -306,7 +325,8 @@ window.openStarDetail = (cId, sName) => {
 
     const igtHistory = [...runs].sort((a,b) => b.date.localeCompare(a.date));
     const igtTable = generateHistoryTable(igtHistory, "Best IGT History", "history-igt");
-    const rtTable = generateHistoryTable(igtHistory, "Best Real Time History", "history-rt");
+    const rtHistory = runs.filter(r => r.rta && r.rta !== '-' && r.rta !== '').sort((a,b) => b.date.localeCompare(a.date));
+    const rtTable = generateHistoryTable(rtHistory, "Best Real Time History", "history-rt");
 
     content.innerHTML = `
         <div class="course-section" style="background:none;border:none;box-shadow:none">
@@ -338,22 +358,13 @@ function generateHistoryTable(runs, title, cssClass) {
         </div>`;
 }
 
-// --- EDIT LOGIC ---
+// --- EDIT & HELPERS ---
 window.openEditModal = (runId) => {
-    // Tenta achar em GLOBAL_RUNS, se não, busca no DOM (caso seja mod queue)
-    // Para simplificar, vamos fazer uma query rápida se não estiver em global
     let run = GLOBAL_RUNS.find(r => r.id === runId);
     if(!run) {
-        // Hack para Mod Queue: Como não temos os dados no global_runs se for pendente,
-        // vamos apenas abrir o modal e o usuario preenche (ou melhor, buscar via ID)
-        // Para facilitar, vou apenas assumir que o usuário está editando algo visível
-        // Mas o ideal é buscar no Firestore. Vou deixar simplificado para o que temos.
-        // Se estiver no mod queue, precisa implementar busca individual.
-        // Vamos usar a UI para preencher dados básicos ou buscar novamente.
-        alert("Edit feature works best on verified runs currently. For pending runs, please Reject and Resubmit.");
+        alert("Editing pending runs is restricted in this view. Reject and Resubmit is safer.");
         return;
     }
-    
     document.getElementById('edit-id').value = run.id;
     document.getElementById('edit-runner').value = run.runner;
     document.getElementById('edit-igt').value = run.igt;
@@ -381,23 +392,11 @@ window.handleEditSubmission = async (e) => {
     } catch(err) { alert("Error: " + err.message); }
 };
 
-window.deleteRun = async (id) => {
-    if(confirm("Delete this run?")) {
-        try { await deleteDoc(doc(db, "runs", id)); loadData(); if(IS_MOD) loadModQueue(); } catch(e) { alert("Error."); }
-    }
-};
-
-// --- MOD APPROVE/REJECT ---
+window.deleteRun = async (id) => { if(confirm("Delete?")) { try { await deleteDoc(doc(db, "runs", id)); loadData(); if(IS_MOD) loadModQueue(); } catch(e) { alert("Error."); } } };
 window.verifyRun = async (id) => { await updateDoc(doc(db, "runs", id), { status: "verified" }); document.getElementById(`card-${id}`).remove(); loadData(); };
 window.rejectRun = async (id) => { await deleteDoc(doc(db, "runs", id)); document.getElementById(`card-${id}`).remove(); };
 
-// --- HELPERS ---
-function getYoutubeId(url) {
-    if (!url) return null;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-}
+function getYoutubeId(url) { if (!url) return null; const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/); return (match && match[2].length === 11) ? match[2] : null; }
 function formatDate(d) { if(!d)return""; const p=d.split('-'); return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d; }
 
 window.switchView = (v) => {
