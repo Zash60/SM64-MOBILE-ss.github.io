@@ -86,6 +86,9 @@ function renderCoursesTable() {
     COURSES.forEach(course => {
         let rows = '';
         course.stars.forEach(starName => {
+            // --- FIX: Escapar aspas simples para não quebrar o onclick ---
+            const safeStarName = starName.replace(/'/g, "\\'");
+            
             const starRuns = GLOBAL_RUNS.filter(r => r.courseId === course.id && r.star === starName);
             starRuns.sort((a, b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
             const wr = starRuns[0];
@@ -98,7 +101,7 @@ function renderCoursesTable() {
 
             if (wr) {
                 rows += `
-                <tr onclick="openStarDetail('${course.id}', '${starName}')">
+                <tr onclick="openStarDetail('${course.id}', '${safeStarName}')">
                     <td>${starName}</td>
                     <td>${wr.runner}</td>
                     <td>${wr.rta}</td>
@@ -108,7 +111,7 @@ function renderCoursesTable() {
                 </tr>`;
             } else {
                 rows += `
-                <tr onclick="openStarDetail('${course.id}', '${starName}')">
+                <tr onclick="openStarDetail('${course.id}', '${safeStarName}')">
                     <td>${starName}</td>
                     <td colspan="${IS_MOD ? 5 : 4}" style="color:#555; text-align:center;">-</td>
                 </tr>`;
@@ -139,7 +142,7 @@ function renderTimeline() {
 
     recent.forEach(run => {
         const textHTML = generateTimelineText(run);
-        const tagHTML = getRecordTag(run); // Nova função para decidir a tag [RT], [IGT], etc.
+        const tagHTML = getRecordTag(run); 
 
         const modBtns = IS_MOD ? `
             <div style="min-width:60px; text-align:right;">
@@ -164,19 +167,17 @@ function renderTimeline() {
     });
 }
 
-// --- LÓGICA DE TAG (RT vs IGT) ---
+// --- LÓGICA DE TAG ---
 function getRecordTag(currentRun) {
     const previousRuns = GLOBAL_RUNS.filter(r => 
         r.courseId === currentRun.courseId && r.star === currentRun.star && r.date < currentRun.date
     );
 
-    if (previousRuns.length === 0) return "[New]"; // Primeiro registro
+    if (previousRuns.length === 0) return "[New]"; 
 
-    // Melhor IGT anterior
     previousRuns.sort((a, b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
     const prevBestIGT = previousRuns[0];
 
-    // Melhor RT anterior
     const prevRunsRT = previousRuns.filter(r => r.rta && r.rta !== '-');
     prevRunsRT.sort((a, b) => timeToSeconds(a.rta) - timeToSeconds(b.rta));
     const prevBestRT = prevRunsRT.length > 0 ? prevRunsRT[0] : null;
@@ -185,19 +186,15 @@ function getRecordTag(currentRun) {
     
     let beatRT = false;
     if (prevBestRT && currentRun.rta && currentRun.rta !== '-') {
-        if (timeToSeconds(currentRun.rta) < timeToSeconds(prevBestRT.rta)) {
-            beatRT = true;
-        }
+        if (timeToSeconds(currentRun.rta) < timeToSeconds(prevBestRT.rta)) beatRT = true;
     } else if (!prevBestRT && currentRun.rta && currentRun.rta !== '-') {
-        // Se não tinha RT antes e agora tem, consideramos um recorde de RT
         beatRT = true;
     }
 
     if (beatRT && beatIGT) return "[RT/IGT]";
     if (beatRT) return "[RT]";
     if (beatIGT) return "[IGT]";
-    
-    return "[Run]"; // Não bateu recorde
+    return "[Run]";
 }
 
 // --- LÓGICA DE TEXTO DA TIMELINE ---
@@ -313,18 +310,16 @@ async function loadModQueue() {
     qList.innerHTML = html;
 }
 
-// --- DETALHES DA ESTRELA (COM TROCA DE VÍDEO) ---
+// --- DETALHES DA ESTRELA ---
 window.openStarDetail = (cId, sName) => {
     window.switchView('detail');
     const content = document.getElementById('star-detail-content');
     const runs = GLOBAL_RUNS.filter(r => r.courseId === cId && r.star === sName);
     const cColor = COURSES.find(c => c.id === cId)?.color || 'bg-bob';
 
-    // WR Inicial
     const runsIGT = [...runs].sort((a,b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
     const wr = runsIGT[0];
 
-    // Container de Vídeo (Com ID para troca)
     let vidContent = '<p style="text-align:center;padding:20px;color:#777">No video available</p>';
     if(wr && wr.videoLink) {
         const yId = getYoutubeId(wr.videoLink);
@@ -354,25 +349,22 @@ window.openStarDetail = (cId, sName) => {
         </div>`;
 };
 
-// Função para trocar vídeo ao clicar
 window.changeVideo = (videoId, runner, time, isRT) => {
     const container = document.getElementById('main-video-display');
     const info = document.getElementById('video-info');
-    
-    const ytId = getYoutubeId(videoId); // Assume que o ID ou Link é passado
+    const ytId = getYoutubeId(videoId);
     if(ytId) {
         container.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}" frameborder="0" allowfullscreen></iframe>`;
         info.innerHTML = `Selected Run: <b>${runner}</b> - <b>${time}</b> ${isRT ? '(RT)' : ''}`;
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-        alert("Invalid video link for this run.");
+        alert("Invalid video link.");
     }
 };
 
 function generateHistoryTable(runs, title, cssClass) {
     let rows = '';
     const isRTTable = title.includes("Real Time");
-    
     runs.forEach(r => {
         const modBtns = IS_MOD ? `
             <td class="mod-controls" onclick="event.stopPropagation()">
@@ -380,7 +372,6 @@ function generateHistoryTable(runs, title, cssClass) {
                 <button class="btn-del-sm" onclick="deleteRun('${r.id}')"><i class="fas fa-trash"></i></button>
             </td>` : '';
         
-        // Adiciona onclick para trocar o vídeo
         const timeVal = isRTTable ? r.rta : r.igt;
         rows += `
             <tr onclick="changeVideo('${r.videoLink}', '${r.runner}', '${timeVal}', ${isRTTable})">
