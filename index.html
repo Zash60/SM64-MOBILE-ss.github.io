@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SM64 Mobile Records</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Ícones do FontAwesome para o Timeline -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -13,9 +12,11 @@
         <h1>SM64 Mobile - Records</h1>
         <nav>
             <a onclick="switchView('courses')" class="nav-link active">Courses</a>
-            <a onclick="switchView('timeline')" class="nav-link">Timeline / Activity</a>
+            <a onclick="switchView('timeline')" class="nav-link">Timeline</a>
+            <a onclick="switchView('mod')" class="nav-link" id="mod-link" style="display:none;">Mod Queue</a>
             <span style="color: #555">|</span>
             <a class="action-button" onclick="openSubmissionModal()">Submit Run</a>
+            <a class="login-btn" onclick="openLoginModal()" id="login-btn-text">Mod Login</a>
         </nav>
     </header>
 
@@ -25,20 +26,30 @@
             <div id="courses-container"></div>
         </div>
 
-        <!-- TELA 2: TIMELINE (Histórico Recente) -->
+        <!-- TELA 2: TIMELINE -->
         <div id="view-timeline" style="display: none;">
-            <div class="timeline-header">Recent Activity</div>
+            <div class="timeline-header">Recent Activity (Verified Runs)</div>
             <div id="timeline-feed"></div>
         </div>
 
-        <!-- TELA 3: DETALHES DA ESTRELA (Vídeo + Histórico) -->
+        <!-- TELA 3: DETALHES DA ESTRELA -->
         <div id="view-star-detail" style="display: none;">
             <button onclick="switchView('courses')" class="back-btn">← Back to Courses</button>
             <div id="star-detail-content"></div>
         </div>
+
+        <!-- TELA 4: MOD DASHBOARD -->
+        <div id="view-mod" style="display: none;">
+            <div class="course-section">
+                <div class="course-header bg-secret">Pending Verification</div>
+                <div id="mod-queue-list" style="padding: 20px;">
+                    <p style="text-align:center; color:#999;">Checking for pending runs...</p>
+                </div>
+            </div>
+        </div>
     </main>
 
-    <!-- Modals (Mantidos iguais) -->
+    <!-- MODAL: SUBMISSION -->
     <div id="submission-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('submission-modal')">&times;</span>
@@ -59,12 +70,29 @@
         </div>
     </div>
 
-    <!-- Firebase Init -->
+    <!-- MODAL: LOGIN -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('login-modal')">&times;</span>
+            <h2>Moderator Access</h2>
+            <form onsubmit="handleLogin(event)">
+                <input type="email" id="email" required placeholder="Email">
+                <input type="password" id="password" required placeholder="Password">
+                <button type="submit">Log In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Inicialização Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
         import { firebaseConfig } from './firebase-config.js';
-        window.db = getFirestore(initializeApp(firebaseConfig));
+        
+        const app = initializeApp(firebaseConfig);
+        window.db = getFirestore(app);
+        window.auth = getAuth(app);
     </script>
     <script src="script.js" type="module"></script>
 </body>
