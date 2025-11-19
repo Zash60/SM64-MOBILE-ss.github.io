@@ -114,7 +114,6 @@ main {
     text-shadow: 2px 2px 3px #000;
     border-bottom: 2px solid #fff;
 
-    /* Padrão de Listras Diagonais */
     background-image: linear-gradient(
         45deg, 
         rgba(255, 255, 255, 0.15) 25%, 
@@ -128,7 +127,7 @@ main {
     background-size: 30px 30px;
 }
 
-/* --- CORES DAS FASES (LISTA COMPLETA) --- */
+/* --- CORES DAS FASES --- */
 .bg-bob { background-color: #228B22; } /* 1. Verde */
 .bg-wf  { background-color: #696969; } /* 2. Cinza */
 .bg-jrb { background-color: #004080; } /* 3. Azul Escuro */
@@ -239,13 +238,25 @@ main {
     gap: 15px;
     border-left: 5px solid var(--timeline-accent);
     transition: background 0.2s;
+    align-items: flex-start; /* Alinha ícone no topo */
 }
 .timeline-card:hover { background-color: #161616; }
 
+/* Ícone estilo "Avatar" */
+.timeline-icon-container {
+    flex-shrink: 0;
+    width: 50px;
+    height: 50px;
+    /* Pode usar uma imagem aqui se quiser */
+    background-color: transparent; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 .timeline-icon {
-    font-size: 1.8rem;
+    font-size: 2.5rem; /* Ícone Grande */
     color: var(--timeline-accent);
-    padding-top: 5px;
 }
 
 .timeline-content { width: 100%; }
@@ -261,7 +272,7 @@ main {
 
 .timeline-date { display: block; margin-bottom: 8px; font-size: 0.8rem; color: #666; }
 
-/* TEXTO DA TIMELINE AVANÇADA */
+/* Texto Avançado da Timeline */
 .timeline-text {
     color: #ccc;
     font-size: 0.95rem;
@@ -270,8 +281,8 @@ main {
 .timeline-text a { color: var(--link-color); text-decoration: none; font-weight: bold; }
 .timeline-text b { color: #fff; }
 
-.diff-neg { color: var(--success-color); font-size: 0.9em; }
-.diff-pos { color: var(--danger-color); font-size: 0.9em; }
+.diff-neg { color: var(--success-color); font-size: 0.9em; } /* Verde */
+.diff-pos { color: var(--danger-color); font-size: 0.9em; } /* Vermelho */
 
 /* =========================================
    PÁGINA DE DETALHES DA ESTRELA
