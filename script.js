@@ -4,8 +4,8 @@ import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https:/
 const db = window.db;
 const auth = window.auth;
 
-let GLOBAL_RUNS = []; // Runs Verificadas
-let PENDING_RUNS = []; // Runs Pendentes (Para edição no Mod Queue)
+let GLOBAL_RUNS = []; 
+let PENDING_RUNS = []; 
 let IS_MOD = false;
 
 // --- CONFIGURAÇÃO DAS FASES ---
@@ -69,6 +69,31 @@ async function loadData() {
     } catch (err) { console.error(err); container.innerHTML = '<div style="text-align:center">Error loading data.</div>'; }
 }
 
+// --- SISTEMA DE VÍDEO (YOUTUBE + BILIBILI) ---
+
+// Detecta o tipo de vídeo e retorna o código de embed correto
+function getVideoEmbed(url) {
+    if (!url) return null;
+
+    // 1. YouTube
+    const ytMatch = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
+    if (ytMatch && ytMatch[2].length === 11) {
+        return `<iframe src="https://www.youtube.com/embed/${ytMatch[2]}" frameborder="0" allowfullscreen></iframe>`;
+    }
+
+    // 2. Bilibili (Suporta links curtos e completos)
+    // Regex busca por "/video/BV..."
+    const biliMatch = url.match(/bilibili\.com\/video\/(BV\w+)/);
+    if (biliMatch && biliMatch[1]) {
+        const bvid = biliMatch[1];
+        // high_quality=1 para melhor resolução, danmaku=0 para esconder comentários da tela
+        return `<iframe src="//player.bilibili.com/player.html?bvid=${bvid}&page=1&high_quality=1&danmaku=0" frameborder="0" allowfullscreen></iframe>`;
+    }
+
+    return null; // Link inválido ou não suportado
+}
+
+
 // --- MATEMÁTICA DE TEMPO ---
 function timeToSeconds(str) {
     if(!str || str === '-' || str === '') return 9999999;
@@ -87,9 +112,7 @@ function renderCoursesTable() {
     COURSES.forEach(course => {
         let rows = '';
         course.stars.forEach(starName => {
-            // Escapa aspas simples para não quebrar o JavaScript no onclick
             const safeStarName = starName.replace(/'/g, "\\'");
-            
             const starRuns = GLOBAL_RUNS.filter(r => r.courseId === course.id && r.star === starName);
             starRuns.sort((a, b) => timeToSeconds(a.igt) - timeToSeconds(b.igt));
             const wr = starRuns[0];
@@ -133,7 +156,7 @@ function renderCoursesTable() {
     });
 }
 
-// --- TIMELINE (COM VÍDEO EXPANDÍVEL) ---
+// --- TIMELINE ---
 function renderTimeline() {
     const feed = document.getElementById('timeline-feed');
     feed.innerHTML = '';
@@ -148,9 +171,10 @@ function renderTimeline() {
         const vidBtnId = `vid-btn-${run.id}`;
 
         const modBtns = IS_MOD ? `
-            <button class="btn-edit-sm" onclick="openEditModal('${run.id}')"><i class="fas fa-edit"></i></button>
-            <button class="btn-del-sm" onclick="deleteRun('${run.id}')"><i class="fas fa-trash"></i></button>
-        ` : '';
+            <div style="min-width:60px; text-align:right;">
+                <button class="btn-edit-sm" onclick="openEditModal('${run.id}')"><i class="fas fa-edit"></i></button>
+                <button class="btn-del-sm" onclick="deleteRun('${run.id}')"><i class="fas fa-trash"></i></button>
+            </div>` : '';
 
         feed.innerHTML += `
             <div class="timeline-card">
@@ -160,7 +184,7 @@ function renderTimeline() {
                 <div class="timeline-content">
                     <div class="timeline-header-row">
                         <h4 style="color:#fff; margin:0;">${tagHTML} ${getCoursesCode(run.courseId)} - ${run.star}</h4>
-                        <div style="display:flex; gap:5px;">${modBtns}</div>
+                        ${modBtns}
                     </div>
                     <div class="timeline-date">${formatDate(run.date)}</div>
                     <div class="timeline-text">${textHTML}</div>
@@ -183,21 +207,19 @@ window.toggleTimelineVideo = (runId, videoUrl) => {
     const btn = document.getElementById(`vid-btn-${runId}`);
     
     if (container.style.display === 'block') {
-        // Fechar
         container.style.display = 'none';
         container.innerHTML = ''; 
         btn.classList.remove('active');
         btn.innerHTML = '<i class="fas fa-play-circle"></i> Watch Video';
     } else {
-        // Abrir
-        const ytId = getYoutubeId(videoUrl);
-        if (ytId) {
-            container.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}" frameborder="0" allowfullscreen></iframe>`;
+        const embedHTML = getVideoEmbed(videoUrl);
+        if (embedHTML) {
+            container.innerHTML = embedHTML;
             container.style.display = 'block';
             btn.classList.add('active');
             btn.innerHTML = '<i class="fas fa-times-circle"></i> Close Video';
         } else {
-            alert("Invalid video link.");
+            alert("Invalid video link or platform not supported (Only YouTube & Bilibili).");
         }
     }
 };
@@ -318,14 +340,14 @@ function getCoursesCode(id) {
     return map[id] || id.toUpperCase();
 }
 
-// --- MOD QUEUE (COM EDIÇÃO) ---
+// --- MOD QUEUE ---
 async function loadModQueue() {
     const qList = document.getElementById('mod-queue-list');
     if(!IS_MOD) return;
     const q = query(collection(db, "runs"), where("status", "==", "pending"));
     const snap = await getDocs(q);
     
-    PENDING_RUNS = []; // Salva para edição
+    PENDING_RUNS = []; 
     
     if(snap.empty) { qList.innerHTML = '<p style="text-align:center;color:#777">No pending runs.</p>'; return; }
     let html = '';
@@ -350,7 +372,7 @@ async function loadModQueue() {
     qList.innerHTML = html;
 }
 
-// --- DETALHES DA ESTRELA (COMPLETA) ---
+// --- DETALHES DA ESTRELA ---
 window.openStarDetail = (cId, sName) => {
     window.switchView('detail');
     const content = document.getElementById('star-detail-content');
@@ -362,9 +384,10 @@ window.openStarDetail = (cId, sName) => {
     const wr = runsIGT[0];
 
     let vidContent = '<p style="text-align:center;padding:20px;color:#777">No video available</p>';
-    if(wr && wr.videoLink) {
-        const yId = getYoutubeId(wr.videoLink);
-        if(yId) vidContent = `<iframe src="https://www.youtube.com/embed/${yId}" frameborder="0" allowfullscreen></iframe>`;
+    // Usa a nova função getVideoEmbed
+    const embedHTML = getVideoEmbed(wr?.videoLink);
+    if(embedHTML) {
+        vidContent = embedHTML;
     }
     
     const videoSection = `
@@ -396,13 +419,13 @@ window.changeVideo = (videoId, runner, time, isRT) => {
     const container = document.getElementById('main-video-display');
     const info = document.getElementById('video-info');
     
-    const ytId = getYoutubeId(videoId);
-    if(ytId) {
-        container.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}" frameborder="0" allowfullscreen></iframe>`;
+    const embedHTML = getVideoEmbed(videoId);
+    if(embedHTML) {
+        container.innerHTML = embedHTML;
         info.innerHTML = `Selected Run: <b>${runner}</b> - <b>${time}</b> ${isRT ? '(RT)' : ''}`;
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-        alert("Invalid video link for this run.");
+        alert("Invalid video link.");
     }
 };
 
@@ -482,7 +505,6 @@ window.deleteRun = async (id) => { if(confirm("Delete?")) { try { await deleteDo
 window.verifyRun = async (id) => { await updateDoc(doc(db, "runs", id), { status: "verified" }); document.getElementById(`card-${id}`).remove(); loadData(); };
 window.rejectRun = async (id) => { await deleteDoc(doc(db, "runs", id)); document.getElementById(`card-${id}`).remove(); };
 
-function getYoutubeId(url) { if (!url) return null; const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/); return (match && match[2].length === 11) ? match[2] : null; }
 function formatDate(d) { if(!d)return""; const p=d.split('-'); return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d; }
 
 window.switchView = (v) => {
