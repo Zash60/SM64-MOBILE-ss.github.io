@@ -3,98 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Mario 64 Singlestar</title>
+    <title>SM64 Mobile Single Star Records</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Fonte Roboto para ficar igual -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <header>
-        <h1>Super Mario 64 Singlestar</h1>
+        <h1>SM64 Mobile - Single Star Records</h1>
         <nav>
-            <!-- Sem Timeline por enquanto pois requer lógica complexa, mantendo o básico -->
-            <span id="current-date" style="color: #aaa; align-self: center;"></span>
+            <a href="#home">Courses</a>
+            <a href="#worldrecords">World Records</a>
+            <a href="#wrhistory">WR History</a>
+            <span id="mod-queue-link-container"></span>
         </nav>
-        
-        <div id="user-actions">
-            <!-- Botão Submission verde estilo foto -->
-            <a class="action-button" onclick="openSubmissionModal()">
-                Submission <span style="margin-left:5px; font-size:1.2em;">+</span>
-            </a>
-            <!-- Auth Section -->
+        <div id="user-actions" style="margin-top: 1rem;">
+            <a class="action-button" onclick="openSubmissionModal()">Submit Run</a>
+            <span style="color: var(--border-color); margin: 0 10px;">|</span>
             <span id="moderator-auth-section"></span>
         </div>
     </header>
-    
     <main id="app-container"></main>
 
-    <!-- MODAL DE SUBMISSÃO -->
+    <!-- Modals -->
     <div id="submission-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('submission-modal')">&times;</span>
-            <h2 style="text-align:center; color: var(--accent-green);">Submit New Run</h2>
+            <h2>Submit New Run</h2>
             <form id="submission-form" onsubmit="handleRunSubmission(event)">
-                <select id="course-select" required><option value="">Select Course</option></select>
-                <select id="star-select" required disabled><option value="">Select Star</option></select>
+                <select id="course-select" required>
+                    <option value="">Select a Course</option>
+                </select>
+                <select id="star-select" required disabled>
+                    <option value="">Select a Star</option>
+                </select>
                 <input type="text" id="runner" required placeholder="Runner Name">
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="igt" required placeholder="IGT (e.g. 41&quot;06)">
-                    <input type="text" id="rta" placeholder="Real Time (Optional)">
+                <div class="form-row">
+                    <input type="text" id="igt" required placeholder="In-Game Time (IGT)">
+                    <input type="text" id="rta" placeholder="Real Time (RTA) (Optional)">
                 </div>
-                <label style="font-size:0.8em; color:#aaa;">Date</label>
-                <input type="date" id="date" required>
-                <input type="url" id="videoLink" required placeholder="Video Link (YouTube)">
+                <label for="date" class="visually-hidden">Date of the Run</label>
+                <input type="date" id="date" required title="Date of the Run">
+                <input type="url" id="videoLink" required placeholder="Video Link (e.g., https://youtu.be/...)">
                 <button type="submit" id="submit-run-button">Submit Run</button>
             </form>
         </div>
     </div>
 
-    <!-- MODAL EDITAR -->
     <div id="edit-run-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('edit-run-modal')">&times;</span>
             <h2>Edit Run</h2>
             <form id="edit-run-form" onsubmit="handleRunUpdate(event)">
-                <input type="hidden" id="edit-run-id"><input type="hidden" id="edit-course-id"><input type="hidden" id="edit-star-id">
-                <label>Runner</label><input type="text" id="edit-runner" required>
-                <label>IGT</label><input type="text" id="edit-igt" required>
-                <label>RTA</label><input type="text" id="edit-rta">
-                <label>Date</label><input type="date" id="edit-date" required>
-                <label>Video</label><input type="url" id="edit-videoLink" required>
-                <button type="submit" id="update-run-button">Update</button>
+                <input type="hidden" id="edit-run-id">
+                <input type="hidden" id="edit-course-id">
+                <input type="hidden" id="edit-star-id">
+                <label for="edit-runner">Runner:</label>
+                <input type="text" id="edit-runner" required>
+                <label for="edit-igt">In-Game Time (IGT):</label>
+                <input type="text" id="edit-igt" required>
+                <label for="edit-rta">Real Time (RTA):</label>
+                <input type="text" id="edit-rta">
+                <label for="edit-date">Date:</label>
+                <input type="date" id="edit-date" required>
+                <label for="edit-videoLink">Video Link:</label>
+                <input type="url" id="edit-videoLink" required>
+                <button type="submit" id="update-run-button">Update Run</button>
             </form>
         </div>
     </div>
 
-    <!-- MODAL LOGIN -->
     <div id="login-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('login-modal')">&times;</span>
             <h2>Moderator Login</h2>
             <form id="login-form" onsubmit="handleLogin(event)">
-                <input type="email" id="email" required placeholder="Email">
-                <input type="password" id="password" required placeholder="Password">
+                <label for="email">Email:</label>
+                <input type="email" id="email" required>
+                <label for="password">Password:</label>
+                <input type="password" id="password" required>
                 <button type="submit">Log In</button>
-                <p id="login-error" class="error-message" style="color:red; display:none; text-align:center; margin-top:10px;">Error logging in</p>
+                <p id="login-error" class="error-message"></p>
             </form>
         </div>
     </div>
 
-    <!-- FIREBASE INIT -->
+    <!-- 1. Inicializa o Firebase e coloca as variáveis no Window -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        
+        // Importa o config (Você precisa ter o arquivo firebase-config.js na pasta)
         import { firebaseConfig } from './firebase-config.js';
         
         const app = initializeApp(firebaseConfig);
+        
+        // Define globalmente para o script.js usar
         window.db = getFirestore(app);
         window.auth = getAuth(app);
-        
-        // Data de hoje no header
-        document.getElementById('current-date').innerText = new Date().toLocaleDateString();
     </script>
     
+    <!-- 2. Carrega a lógica do site -->
     <script src="script.js" type="module"></script>
 </body>
 </html>
