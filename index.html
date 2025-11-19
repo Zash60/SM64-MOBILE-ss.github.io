@@ -42,9 +42,7 @@
         <div id="view-mod" style="display: none;">
             <div class="course-section">
                 <div class="course-header bg-secret">Pending Verification</div>
-                <div id="mod-queue-list" style="padding: 20px;">
-                    <p style="text-align:center; color:#999;">Checking for pending runs...</p>
-                </div>
+                <div id="mod-queue-list" style="padding: 20px;">Loading...</div>
             </div>
         </div>
     </main>
@@ -60,12 +58,33 @@
                 <input type="text" id="runner" required placeholder="Player Name">
                 <div class="form-row">
                     <input type="text" id="igt" required placeholder="IGT (e.g. 1:18.23)">
-                    <input type="text" id="rta" placeholder="RTA (Optional)">
+                    <input type="text" id="rta" placeholder="Real Time (Optional)">
                 </div>
-                <!-- Campo de Versão Removido -->
                 <input type="date" id="date" required>
                 <input type="url" id="videoLink" required placeholder="Video Link (YouTube)">
                 <button type="submit" id="submit-run-button">Submit Run</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EDIT RUN (NOVO) -->
+    <div id="edit-run-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('edit-run-modal')">&times;</span>
+            <h2>Edit Run</h2>
+            <form id="edit-run-form" onsubmit="handleEditSubmission(event)">
+                <input type="hidden" id="edit-id">
+                <label>Player:</label>
+                <input type="text" id="edit-runner" required>
+                <div class="form-row">
+                    <div><label>IGT:</label><input type="text" id="edit-igt" required></div>
+                    <div><label>RT:</label><input type="text" id="edit-rta"></div>
+                </div>
+                <label>Date:</label>
+                <input type="date" id="edit-date" required>
+                <label>Video Link:</label>
+                <input type="url" id="edit-videoLink" required>
+                <button type="submit" style="background-color: #f39c12;">Update Run</button>
             </form>
         </div>
     </div>
@@ -83,7 +102,6 @@
         </div>
     </div>
 
-    <!-- Inicialização Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
