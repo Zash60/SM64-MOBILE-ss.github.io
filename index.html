@@ -10,7 +10,7 @@
     <header>
         <h1>SM64 Mobile - Single Star Records</h1>
         <nav>
-            <a onclick="renderCourses()">Courses</a>
+            <a href="#home">Courses</a>
             <a href="#worldrecords">World Records</a>
             <a href="#wrhistory">WR History</a>
             <span id="mod-queue-link-container"></span>
@@ -18,15 +18,10 @@
         <div id="user-actions" style="margin-top: 1rem;">
             <a class="action-button" onclick="openSubmissionModal()">Submit Run</a>
             <span style="color: var(--border-color); margin: 0 10px;">|</span>
-            <span id="moderator-auth-section">
-                <a class="action-button" onclick="openLoginModal()">Mod Login</a>
-            </span>
+            <span id="moderator-auth-section"></span>
         </div>
     </header>
-    
-    <main id="app-container">
-        <div class="loader">Loading Leaderboard...</div>
-    </main>
+    <main id="app-container"></main>
 
     <!-- Modals -->
     <div id="submission-modal" class="modal">
@@ -34,7 +29,7 @@
             <span class="close-btn" onclick="closeModal('submission-modal')">&times;</span>
             <h2>Submit New Run</h2>
             <form id="submission-form" onsubmit="handleRunSubmission(event)">
-                <select id="course-select" required onchange="handleCourseSelectChange(this.value)">
+                <select id="course-select" required>
                     <option value="">Select a Course</option>
                 </select>
                 <select id="star-select" required disabled>
@@ -91,7 +86,23 @@
         </div>
     </div>
 
-    <!-- IMPORTANTE: Único ponto de entrada do JavaScript -->
-    <script type="module" src="script.js"></script>
+    <!-- 1. Inicializa o Firebase e coloca as variáveis no Window -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        
+        // Importa o config (Você precisa ter o arquivo firebase-config.js na pasta)
+        import { firebaseConfig } from './firebase-config.js';
+        
+        const app = initializeApp(firebaseConfig);
+        
+        // Define globalmente para o script.js usar
+        window.db = getFirestore(app);
+        window.auth = getAuth(app);
+    </script>
+    
+    <!-- 2. Carrega a lógica do site -->
+    <script src="script.js" type="module"></script>
 </body>
 </html>
