@@ -25,7 +25,6 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      # ESTE É O PASSO QUE FALTA: Cria o arquivo usando os Secrets
       - name: Gerar firebase-config.js via Secrets
         run: |
           echo "export const firebaseConfig = {" > firebase-config.js
@@ -36,6 +35,10 @@ jobs:
           echo "  messagingSenderId: '${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}'," >> firebase-config.js
           echo "  appId: '${{ secrets.FIREBASE_APP_ID }}'" >> firebase-config.js
           echo "};" >> firebase-config.js
+
+      # PASSO DE DEBUG NOVO:
+      - name: Verificar arquivos gerados
+        run: ls -la
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
