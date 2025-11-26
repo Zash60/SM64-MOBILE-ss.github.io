@@ -1,10 +1,16 @@
 :root {
-    --bg-color: #0a0a0a;
-    --text-color: #e0e0e0;
-    --table-bg: #000033;       /* Fundo da tabela (Azul escuro) */
-    --table-header: #000044;   /* Cabeçalho da tabela */
-    --star-color: #ffffff;     /* Cor do nome da estrela */
-    --accent-color: #6200ee;
+    --bg-color: #0a0a0a;        /* Fundo Preto/Cinza muito escuro */
+    --text-color: #e0e0e0;      /* Texto Claro */
+    --card-bg: #000033;         /* Fundo das Tabelas (Azul Marinho Profundo) */
+    --table-header: #000044;    /* Cabeçalho da tabela */
+    --accent-color: #6200ee;    /* Roxo para botões principais */
+    --link-color: #87CEEB;      /* Azul Céu para links */
+    --timeline-accent: #d35400; /* Laranja para o Timeline */
+    --success-color: #27ae60;   /* Verde (Aprovar/Melhor tempo) */
+    --danger-color: #c0392b;    /* Vermelho (Rejeitar/Pior tempo) */
+    --edit-color: #f39c12;      /* Amarelo (Editar) */
+    --igt-color: #3498db;       /* Azul (Histórico IGT) */
+    --rt-color: #e74c3c;        /* Vermelho (Histórico RT) */
 }
 
 body {
@@ -13,73 +19,102 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     padding: 0;
+    font-size: 16px;
 }
 
-/* --- HEADER & NAV --- */
+/* =========================================
+   HEADER & NAVEGAÇÃO
+   ========================================= */
 header {
-    background: linear-gradient(to bottom, #000066, #000033);
-    border-bottom: 3px solid #444;
+    background: linear-gradient(to bottom, #000044, #000022);
+    border-bottom: 3px solid #333;
     padding: 1.5rem;
     text-align: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.6);
 }
 
 h1 {
-    color: #2ecc71; /* Verde estilo Mario Singlestar */
-    margin: 0;
+    color: #2ecc71; /* Verde Mario */
+    margin: 0 0 15px 0;
     text-transform: uppercase;
-    letter-spacing: 1px;
     font-size: 2rem;
-    text-shadow: 2px 2px 4px #000;
+    text-shadow: 3px 3px 5px #000;
+    letter-spacing: 1px;
 }
 
 nav {
-    margin-top: 1rem;
     display: flex;
     justify-content: center;
-    gap: 1rem;
+    gap: 20px;
+    align-items: center;
     flex-wrap: wrap;
 }
 
-.nav-btn {
-    background: transparent;
-    border: 1px solid #fff;
-    color: #fff;
-    padding: 5px 15px;
-    border-radius: 4px;
-    text-decoration: none;
-    font-size: 0.9rem;
+.nav-link {
     cursor: pointer;
+    color: #aaa;
+    font-weight: bold;
+    text-decoration: none;
+    font-size: 1.1rem;
+    padding: 5px 10px;
+    transition: color 0.2s;
 }
-.nav-btn:hover { background: rgba(255,255,255,0.2); }
 
-/* --- CONTAINER PRINCIPAL --- */
+.nav-link:hover, .nav-link.active {
+    color: #fff;
+    border-bottom: 2px solid #fff;
+}
+
+.action-button {
+    cursor: pointer;
+    background-color: #333;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    font-size: 0.95rem;
+    text-decoration: none;
+}
+.action-button:hover { background-color: #444; border-color: #fff; }
+
+.login-btn {
+    cursor: pointer;
+    color: #666;
+    font-size: 0.9rem;
+    background: none;
+    border: none;
+    text-decoration: underline;
+}
+.login-btn:hover { color: #fff; }
+
 main {
-    max-width: 1000px;
-    margin: 2rem auto;
-    padding: 0 10px;
+    max-width: 950px;
+    margin: 0 auto;
+    padding: 25px 10px;
 }
 
-/* --- ESTRUTURA DA FASE (CARD) --- */
+/* =========================================
+   ESTRUTURA DAS FASES (HOME)
+   ========================================= */
 .course-section {
     margin-bottom: 2.5rem;
-    border: 2px solid #444;
-    background-color: var(--table-bg);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+    border: 2px solid #333;
+    background-color: var(--card-bg);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.6);
 }
 
-/* --- CABEÇALHO DA FASE (Listrado) --- */
+/* Cabeçalho Listrado */
 .course-header {
     padding: 12px;
     text-align: center;
-    font-size: 1.3rem;
-    font-weight: bold;
+    font-size: 1.4rem;
+    font-weight: 900;
     color: white;
     text-transform: uppercase;
-    text-shadow: 2px 2px 2px #000;
+    text-shadow: 2px 2px 3px #000;
     border-bottom: 2px solid #fff;
 
-    /* O Padrão Listrado Diagonal */
+    /* Padrão de Listras Diagonais */
     background-image: linear-gradient(
         45deg, 
         rgba(255, 255, 255, 0.15) 25%, 
@@ -93,72 +128,387 @@ main {
     background-size: 30px 30px;
 }
 
-/* CORES DAS FASES (Baseado nas imagens) */
-.bg-bob { background-color: #228B22; } /* Verde */
-.bg-wf  { background-color: #696969; } /* Cinza */
-.bg-jrb { background-color: #004080; } /* Azul Escuro */
-.bg-ccm { background-color: #DAA520; } /* Ouro */
-.bg-bbh { background-color: #3E2723; } /* Marrom Escuro */
-.bg-hmc { background-color: #2E7D32; } /* Verde Escuro */
-.bg-lll { background-color: #8B0000; } /* Vermelho Sangue */
-.bg-ssl { background-color: #D35400; } /* Laranja Queimado */
-.bg-ddd { background-color: #1A5276; } /* Azul Oceano */
-.bg-sl  { background-color: #5F6A6A; } /* Cinza Gelo */
-.bg-wdw { background-color: #4A235A; } /* Roxo/Azul Escuro */
-.bg-ttm { background-color: #6E2C00; } /* Marrom Montanha */
-.bg-thi { background-color: #229954; } /* Verde Ilha */
-.bg-ttc { background-color: #9A7D0A; } /* Dourado Escuro */
-.bg-rr  { background-color: #633974; } /* Roxo/Rosa */
-.bg-bowser { background-color: #17202A; } /* Preto/Cinza */
-.bg-secret { background-color: #424949; } /* Cinza Metálico */
+/* --- CORES DAS FASES (LISTA COMPLETA) --- */
+.bg-bob { background-color: #228B22; } /* 1. Verde */
+.bg-wf  { background-color: #696969; } /* 2. Cinza */
+.bg-jrb { background-color: #004080; } /* 3. Azul Escuro */
+.bg-ccm { background-color: #DAA520; } /* 4. Dourado */
+.bg-bbh { background-color: #3E2723; } /* 5. Marrom Escuro */
+.bg-hmc { background-color: #556B2F; } /* 6. Oliva */
+.bg-lll { background-color: #8B0000; } /* 7. Vermelho Sangue */
+.bg-ssl { background-color: #D2691E; } /* 8. Laranja */
+.bg-ddd { background-color: #008080; } /* 9. Ciano */
+.bg-sl  { background-color: #708090; } /* 10. Cinza Azulado */
+.bg-wdw { background-color: #483D8B; } /* 11. Roxo */
+.bg-ttm { background-color: #8B4513; } /* 12. Marrom */
+.bg-thi { background-color: #2E8B57; } /* 13. Verde Mar */
+.bg-ttc { background-color: #B8860B; } /* 14. Dourado Escuro */
+.bg-rr  { background-color: #800080; } /* 15. Roxo Vivo */
+.bg-bowser { background-color: #800000; } /* Bowser (Vermelho) */
+.bg-secret { background-color: #333333; } /* Secretas (Cinza Escuro) */
 
-/* --- TABELA --- */
+/* Tabela */
 .table-responsive { overflow-x: auto; }
-
 .records-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     white-space: nowrap;
 }
 
 .records-table th {
     background-color: var(--table-header);
     color: #fff;
-    padding: 10px;
+    padding: 12px;
     border-bottom: 1px solid #555;
     text-align: center;
 }
 
 .records-table td {
-    padding: 8px 12px;
+    padding: 10px;
     border-bottom: 1px solid #222;
-    color: #ddd;
     text-align: center;
+    color: #ddd;
 }
 
-/* Nome da Estrela alinhado à esquerda e branco */
+/* Coluna do Nome da Estrela */
 .records-table td:first-child {
     text-align: left;
-    color: var(--star-color);
-    width: 35%;
+    color: var(--link-color);
+    font-weight: 500;
+    width: 40%;
+    cursor: pointer;
+}
+.records-table td:first-child:hover {
+    text-decoration: underline;
+    color: #fff;
 }
 
-/* Linha Hover */
+/* Linhas clicáveis e Hover (Importante para trocar vídeo) */
+.records-table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
 .records-table tbody tr:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.15);
 }
 
-/* --- MODAL --- */
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
-.modal-content { background-color: #222; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; border: 1px solid #444; color: white; }
-.close-btn { float: right; font-size: 1.5rem; cursor: pointer; }
-input, select, button { width: 100%; padding: 10px; margin-top: 10px; background: #333; border: 1px solid #555; color: white; box-sizing: border-box; }
-button { background-color: var(--accent-color); border: none; font-weight: bold; cursor: pointer; }
-button:hover { opacity: 0.9; }
+/* --- BOTÕES DE MODERAÇÃO PEQUENOS --- */
+.mod-controls {
+    display: flex;
+    gap: 5px;
+    justify-content: flex-end;
+}
 
-/* Ajuste Mobile */
+.btn-edit-sm {
+    background-color: var(--edit-color);
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.btn-del-sm {
+    background-color: var(--danger-color);
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+/* =========================================
+   TIMELINE / ACTIVITY FEED
+   ========================================= */
+.timeline-header {
+    background-color: #1a1a1a;
+    color: #fff;
+    padding: 15px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border: 1px solid #333;
+    margin-top: 10px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+.timeline-card {
+    background-color: #111;
+    border: 1px solid #333;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 15px;
+    border-left: 5px solid var(--timeline-accent);
+    transition: background 0.2s;
+    align-items: flex-start; /* Alinha ícone no topo */
+}
+.timeline-card:hover { background-color: #161616; }
+
+/* Ícone estilo "Avatar" */
+.timeline-icon-container {
+    flex-shrink: 0;
+    width: 50px;
+    height: 50px;
+    background-color: transparent; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.timeline-icon {
+    font-size: 2.5rem; /* Ícone Grande */
+    color: var(--timeline-accent);
+}
+
+.timeline-content { width: 100%; }
+
+.timeline-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 5px;
+}
+
+.timeline-content h4 { margin: 0; color: #fff; font-size: 1rem; }
+
+.timeline-date { display: block; margin-bottom: 8px; font-size: 0.8rem; color: #666; }
+
+/* Texto Avançado da Timeline */
+.timeline-text {
+    color: #ccc;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+.timeline-text a { color: var(--link-color); text-decoration: none; font-weight: bold; }
+.timeline-text b { color: #fff; }
+
+.diff-neg { color: var(--success-color); font-size: 0.9em; } /* Verde */
+.diff-pos { color: var(--danger-color); font-size: 0.9em; } /* Vermelho */
+
+/* Ações da Timeline (Botão Watch) */
+.timeline-actions {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #333;
+    display: flex;
+    gap: 15px;
+}
+
+.btn-timeline-action {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.2s;
+}
+.btn-timeline-action:hover { color: #fff; }
+.btn-timeline-action.active { color: var(--timeline-accent); }
+
+/* Container de Vídeo na Timeline (Expandível) */
+.timeline-video-embed {
+    margin-top: 10px;
+    width: 100%;
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 */
+    background: #000;
+    display: none; /* Começa escondido */
+    border-radius: 4px;
+    overflow: hidden;
+}
+.timeline-video-embed iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+
+/* =========================================
+   PÁGINA DE DETALHES DA ESTRELA
+   ========================================= */
+.back-btn {
+    background: transparent;
+    border: 1px solid #555;
+    color: #ccc;
+    padding: 8px 15px;
+    cursor: pointer;
+    margin-bottom: 15px;
+    font-size: 1rem;
+    border-radius: 4px;
+}
+.back-btn:hover { background: #333; color: #fff; }
+
+.detail-header {
+    padding: 15px;
+    font-size: 1.5rem;
+    text-align: center;
+    color: white;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px #000;
+    border-bottom: 3px solid #fff;
+}
+
+/* Container de Vídeo Principal 16:9 */
+.video-container {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    border: 3px solid #333;
+    background: #000;
+    margin-bottom: 25px;
+}
+.video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+/* CABEÇALHOS DE HISTÓRICO SEPARADOS */
+.history-section-header {
+    background: #222;
+    color: #fff;
+    padding: 12px;
+    font-weight: bold;
+    border: 1px solid #444;
+    margin-top: 30px;
+    text-align: center;
+    font-size: 1.1rem;
+    border-left: 6px solid #fff;
+}
+
+.history-rt { border-left-color: var(--rt-color); } /* Vermelho */
+.history-igt { border-left-color: var(--igt-color); } /* Azul */
+
+/* =========================================
+   MOD QUEUE (MODERADOR)
+   ========================================= */
+.mod-card {
+    background-color: #222;
+    border: 1px solid #444;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.mod-info h4 { margin: 0 0 5px 0; color: var(--link-color); }
+.mod-info p { margin: 0; color: #bbb; font-size: 0.9rem; line-height: 1.4; }
+.mod-info a { color: #2ecc71; text-decoration: none; font-weight: bold; }
+
+/* Botões alinhados na Mod Queue */
+.mod-queue-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-approve {
+    background-color: var(--success-color);
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-approve:hover { background-color: #219150; }
+
+.btn-reject {
+    background-color: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-reject:hover { background-color: #a93226; }
+
+/* =========================================
+   MODAIS E FORMULÁRIOS
+   ========================================= */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.85);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #1e1e1e;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 450px;
+    border: 1px solid #444;
+    position: relative;
+    box-shadow: 0 0 30px rgba(0,0,0,0.8);
+}
+
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: #888;
+}
+.close-btn:hover { color: #fff; }
+
+.modal h2 {
+    margin-top: 0;
+    color: var(--link-color);
+    text-align: center;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+form input, form select {
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    margin-bottom: 12px;
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    color: #fff;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+form input:focus, form select:focus { outline: 1px solid var(--link-color); border-color: var(--link-color); }
+
+.form-row { display: flex; gap: 10px; }
+.form-row > div { flex: 1; }
+
+button[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+button[type="submit"]:hover { background-color: #7c4dff; }
+button:disabled { background-color: #444; cursor: not-allowed; }
+
+/* Responsividade */
 @media (max-width: 600px) {
+    h1 { font-size: 1.5rem; }
     .course-header { font-size: 1.1rem; }
-    .records-table { font-size: 0.8rem; }
-}
+    .records-table th, .records-table td { padding: 8px; font-size: 0.85rem; }
+    .timeline-card, .mod-card { flex-direction: column; align-items: flex-start; }
+    .mod-queue-controls { width: 100%; margin-top: 10px; justify-content: space-between; }
+    .mod-queue-controls button { flex: 1; }
+    }

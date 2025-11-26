@@ -3,106 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SM64 Mobile Single Star Records</title>
+    <title>SM64 Mobile Records</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <header>
-        <h1>SM64 Mobile - Single Star Records</h1>
+        <h1>SM64 Mobile - Records</h1>
         <nav>
-            <a href="#home">Courses</a>
-            <a href="#worldrecords">World Records</a>
-            <a href="#wrhistory">WR History</a>
-            <span id="mod-queue-link-container"></span>
-        </nav>
-        <div id="user-actions" style="margin-top: 1rem;">
+            <a onclick="switchView('courses')" class="nav-link active">Courses</a>
+            <a onclick="switchView('timeline')" class="nav-link">Timeline</a>
+            <a onclick="switchView('mod')" class="nav-link" id="mod-link" style="display:none;">Mod Queue</a>
+            <span style="color: #555">|</span>
             <a class="action-button" onclick="openSubmissionModal()">Submit Run</a>
-            <span style="color: var(--border-color); margin: 0 10px;">|</span>
-            <span id="moderator-auth-section"></span>
-        </div>
+            <a class="login-btn" onclick="openLoginModal()" id="login-btn-text">Mod Login</a>
+        </nav>
     </header>
-    <main id="app-container"></main>
 
-    <!-- Modals -->
+    <main>
+        <!-- TELA 1: LISTA DE FASES (Home) -->
+        <div id="view-courses">
+            <div id="courses-container"></div>
+        </div>
+
+        <!-- TELA 2: TIMELINE -->
+        <div id="view-timeline" style="display: none;">
+            <div class="timeline-header">Recent Activity (Verified Runs)</div>
+            <div id="timeline-feed"></div>
+        </div>
+
+        <!-- TELA 3: DETALHES DA ESTRELA -->
+        <div id="view-star-detail" style="display: none;">
+            <button onclick="switchView('courses')" class="back-btn">← Back to Courses</button>
+            <div id="star-detail-content"></div>
+        </div>
+
+        <!-- TELA 4: MOD DASHBOARD -->
+        <div id="view-mod" style="display: none;">
+            <div class="course-section">
+                <div class="course-header bg-secret">Pending Verification</div>
+                <div id="mod-queue-list" style="padding: 20px;">Loading...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL: SUBMISSION -->
     <div id="submission-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('submission-modal')">&times;</span>
             <h2>Submit New Run</h2>
             <form id="submission-form" onsubmit="handleRunSubmission(event)">
-                <select id="course-select" required>
-                    <option value="">Select a Course</option>
-                </select>
-                <select id="star-select" required disabled>
-                    <option value="">Select a Star</option>
-                </select>
-                <input type="text" id="runner" required placeholder="Runner Name">
+                <select id="course-select" required><option value="">Select Course</option></select>
+                <select id="star-select" required disabled><option value="">Select Star</option></select>
+                <input type="text" id="runner" required placeholder="Player Name">
                 <div class="form-row">
-                    <input type="text" id="igt" required placeholder="In-Game Time (IGT)">
-                    <input type="text" id="rta" placeholder="Real Time (RTA) (Optional)">
+                    <input type="text" id="igt" required placeholder="IGT (e.g. 1:18.23)">
+                    <input type="text" id="rta" placeholder="Real Time (Optional)">
                 </div>
-                <label for="date" class="visually-hidden">Date of the Run</label>
-                <input type="date" id="date" required title="Date of the Run">
-                <input type="url" id="videoLink" required placeholder="Video Link (e.g., https://youtu.be/...)">
+                <input type="date" id="date" required>
+                <input type="url" id="videoLink" required placeholder="Video Link (YouTube)">
                 <button type="submit" id="submit-run-button">Submit Run</button>
             </form>
         </div>
     </div>
 
+    <!-- MODAL: EDIT RUN (NOVO) -->
     <div id="edit-run-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('edit-run-modal')">&times;</span>
             <h2>Edit Run</h2>
-            <form id="edit-run-form" onsubmit="handleRunUpdate(event)">
-                <input type="hidden" id="edit-run-id">
-                <input type="hidden" id="edit-course-id">
-                <input type="hidden" id="edit-star-id">
-                <label for="edit-runner">Runner:</label>
+            <form id="edit-run-form" onsubmit="handleEditSubmission(event)">
+                <input type="hidden" id="edit-id">
+                <label>Player:</label>
                 <input type="text" id="edit-runner" required>
-                <label for="edit-igt">In-Game Time (IGT):</label>
-                <input type="text" id="edit-igt" required>
-                <label for="edit-rta">Real Time (RTA):</label>
-                <input type="text" id="edit-rta">
-                <label for="edit-date">Date:</label>
+                <div class="form-row">
+                    <div><label>IGT:</label><input type="text" id="edit-igt" required></div>
+                    <div><label>RT:</label><input type="text" id="edit-rta"></div>
+                </div>
+                <label>Date:</label>
                 <input type="date" id="edit-date" required>
-                <label for="edit-videoLink">Video Link:</label>
+                <label>Video Link:</label>
                 <input type="url" id="edit-videoLink" required>
-                <button type="submit" id="update-run-button">Update Run</button>
+                <button type="submit" style="background-color: #f39c12;">Update Run</button>
             </form>
         </div>
     </div>
 
+    <!-- MODAL: LOGIN -->
     <div id="login-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('login-modal')">&times;</span>
-            <h2>Moderator Login</h2>
-            <form id="login-form" onsubmit="handleLogin(event)">
-                <label for="email">Email:</label>
-                <input type="email" id="email" required>
-                <label for="password">Password:</label>
-                <input type="password" id="password" required>
+            <h2>Moderator Access</h2>
+            <form onsubmit="handleLogin(event)">
+                <input type="email" id="email" required placeholder="Email">
+                <input type="password" id="password" required placeholder="Password">
                 <button type="submit">Log In</button>
-                <p id="login-error" class="error-message"></p>
             </form>
         </div>
     </div>
 
-    <!-- 1. Inicializa o Firebase e coloca as variáveis no Window -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-        
-        // Importa o config (Você precisa ter o arquivo firebase-config.js na pasta)
         import { firebaseConfig } from './firebase-config.js';
         
         const app = initializeApp(firebaseConfig);
-        
-        // Define globalmente para o script.js usar
         window.db = getFirestore(app);
         window.auth = getAuth(app);
     </script>
-    
-    <!-- 2. Carrega a lógica do site -->
     <script src="script.js" type="module"></script>
 </body>
 </html>
