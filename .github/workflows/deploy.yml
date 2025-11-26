@@ -25,6 +25,7 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
+      # ESTE É O PASSO QUE FALTA: Cria o arquivo usando os Secrets
       - name: Gerar firebase-config.js via Secrets
         run: |
           echo "export const firebaseConfig = {" > firebase-config.js
