@@ -106,7 +106,7 @@ function AppShell({ onOpenAuth, onOpenSubmit }) {
 }
 
 function RoutedApp() {
-    const { user, isModerator } = useAuth();
+    const { user } = useAuth();
     const { showToast } = useToast();
 
     const [authMode, setAuthMode] = useState(null);
@@ -136,7 +136,7 @@ function RoutedApp() {
                 dateAchieved: form.dateAchieved,
                 videoUrl: form.videoUrl,
                 userId: user?.id || "anonymous",
-                approveNow: isModerator
+                approveNow: false
             });
 
             const insertRes = await supabase
@@ -147,11 +147,7 @@ function RoutedApp() {
                 throw insertRes.error;
             }
 
-            if (isModerator) {
-                showToast("Run added as approved.", "success");
-            } else {
-                showToast("Run submitted for moderation.", "success");
-            }
+            showToast("Run submitted for moderation.", "success");
         } finally {
             setSubmittingRun(false);
         }

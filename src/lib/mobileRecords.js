@@ -35,7 +35,7 @@ export function getRunStarName(run) {
 }
 
 export function getRunDateTimestamp(run) {
-    const source = run.dateAchieved || run.submittedAt || "";
+    const source = run.submittedAt || run.dateAchieved || "";
     const timestamp = new Date(source).getTime();
     return Number.isNaN(timestamp) ? 0 : timestamp;
 }
