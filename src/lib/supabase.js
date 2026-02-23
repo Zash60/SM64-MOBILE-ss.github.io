@@ -10,6 +10,14 @@ export const MODERATOR_USER_ID = moderatorIdFromWindow || import.meta.env.VITE_M
 
 export const hasSupabase = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
+async function noOpLock(_name, _acquireTimeout, fn) {
+    return fn();
+}
+
 export const supabase = hasSupabase
-    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+            lock: noOpLock
+        }
+    })
     : null;
