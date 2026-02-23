@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { COURSES } from "../data/courses";
+import { getRunCourseId, getRunIgt, getRunRta, getRunStarIndex } from "../lib/mobileRecords";
 import Modal from "./Modal";
 
-const INITIAL_FORM = {
+const EMPTY_FORM = {
     courseId: COURSES[0]?.id || "",
     starIndex: "1",
     playerName: "",
@@ -13,15 +14,8 @@ const INITIAL_FORM = {
     videoUrl: ""
 };
 
-function todayIso() {
-    return new Date().toISOString().slice(0, 10);
-}
-
-export default function SubmitRunModal({ open, onClose, onSubmit, submitting = false, submitLabel = "Submit Run" }) {
-    const [form, setForm] = useState({
-        ...INITIAL_FORM,
-        dateAchieved: todayIso()
-    });
+export default function EditRunModal({ open, onClose, run, onSubmit, saving = false }) {
+    const [form, setForm] = useState(EMPTY_FORM);
     const [error, setError] = useState("");
 
     const selectedCourse = useMemo(
@@ -30,43 +24,38 @@ export default function SubmitRunModal({ open, onClose, onSubmit, submitting = f
     );
 
     useEffect(() => {
-        if (!open) return;
+        if (!open || !run) return;
+
         setError("");
         setForm({
-            ...INITIAL_FORM,
-            courseId: COURSES[0]?.id || "",
-            starIndex: "1",
-            dateAchieved: todayIso()
+            courseId: getRunCourseId(run) || COURSES[0]?.id || "",
+            starIndex: String(getRunStarIndex(run) || 1),
+            playerName: run.playerName || "",
+            igt: getRunIgt(run) || "",
+            rta: getRunRta(run) === "-" ? "" : getRunRta(run),
+            dateAchieved: run.dateAchieved || "",
+            videoUrl: run.videoUrl || ""
         });
-    }, [open]);
-
-    useEffect(() => {
-        if (!selectedCourse) return;
-
-        const maxStars = selectedCourse.stars.length;
-        const current = Number(form.starIndex || 0);
-        if (current >= 1 && current <= maxStars) return;
-
-        setForm((prev) => ({
-            ...prev,
-            starIndex: "1"
-        }));
-    }, [form.starIndex, selectedCourse]);
+    }, [open, run]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
+        if (!run) return;
         setError("");
 
         try {
-            await onSubmit({ ...form, starIndex: Number(form.starIndex) });
+            await onSubmit(run, {
+                ...form,
+                starIndex: Number(form.starIndex)
+            });
             onClose();
         } catch (submitError) {
-            setError(submitError.message || "Could not submit run.");
+            setError(submitError.message || "Could not save run.");
         }
     };
 
     return (
-        <Modal open={open} onClose={onClose} title="Submit New Run">
+        <Modal open={open} onClose={onClose} title="Edit Run">
             <form className="form" onSubmit={handleSubmit}>
                 <label>
                     Course
@@ -115,18 +104,16 @@ export default function SubmitRunModal({ open, onClose, onSubmit, submitting = f
                             type="text"
                             value={form.igt}
                             onChange={(event) => setForm((prev) => ({ ...prev, igt: event.target.value }))}
-                            placeholder="1:18.23"
                             required
                         />
                     </label>
 
                     <label>
-                        RT (Optional)
+                        RT
                         <input
                             type="text"
                             value={form.rta}
                             onChange={(event) => setForm((prev) => ({ ...prev, rta: event.target.value }))}
-                            placeholder="1:22.10"
                         />
                     </label>
                 </div>
@@ -147,15 +134,14 @@ export default function SubmitRunModal({ open, onClose, onSubmit, submitting = f
                         type="url"
                         value={form.videoUrl}
                         onChange={(event) => setForm((prev) => ({ ...prev, videoUrl: event.target.value }))}
-                        placeholder="https://www.youtube.com/watch?v=..."
                         required
                     />
                 </label>
 
                 {error && <p className="error-text">{error}</p>}
 
-                <button type="submit" className="btn btn-primary" disabled={submitting}>
-                    {submitting ? "Sending..." : submitLabel}
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                    {saving ? "Saving..." : "Update Run"}
                 </button>
             </form>
         </Modal>

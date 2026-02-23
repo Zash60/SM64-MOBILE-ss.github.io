@@ -2,15 +2,19 @@ import { useEffect, useState } from "react";
 import { Navigate, NavLink, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 
 import AuthModal from "./components/AuthModal";
+import SubmitRunModal from "./components/SubmitRunModal";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ToastProvider, useToast } from "./context/ToastContext";
-import HackPage from "./pages/HackPage";
-import HomePage from "./pages/HomePage";
+import { buildRunPayload, loadMobileSetup } from "./lib/mobileRecords";
+import { hasSupabase, supabase } from "./lib/supabase";
+import CoursesPage from "./pages/CoursesPage";
 import ModeratorPage from "./pages/ModeratorPage";
 import ProfilePage from "./pages/ProfilePage";
+import StarPage from "./pages/StarPage";
+import TimelinePage from "./pages/TimelinePage";
 
-function AppShell({ onOpenAuth }) {
-    const { hasSupabase, ready, user, profile, isModerator, logout, error } = useAuth();
+function AppShell({ onOpenAuth, onOpenSubmit }) {
+    const { ready, user, profile, isModerator, logout, error } = useAuth();
     const { showToast } = useToast();
     const navigate = useNavigate();
 
@@ -33,96 +37,147 @@ function AppShell({ onOpenAuth }) {
 
     return (
         <div className="app-shell">
-            <header className="site-header">
-                <div className="container topbar">
-                    <h1>SM64 Hack Roms Speedrun Mobile</h1>
+            <header>
+                <h1>SM64 Mobile - Records</h1>
 
-                    <nav className="topnav">
-                        <button
-                            type="button"
-                            className="icon-button"
-                            title="Toggle theme"
-                            onClick={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
-                        >
-                            {theme === "dark" ? "moon" : "sun"}
-                        </button>
+                <nav>
+                    <NavLink to="/" end className="nav-link">Courses</NavLink>
+                    <NavLink to="/timeline" className="nav-link">Timeline</NavLink>
+                    {ready && user && <NavLink to="/profile" className="nav-link">Profile</NavLink>}
+                    {ready && user && isModerator && <NavLink to="/moderator" className="nav-link">Mod Queue</NavLink>}
 
-                        <NavLink to="/">Home</NavLink>
+                    <span className="pipe">|</span>
 
-                        {ready && user && <NavLink to="/profile">Profile</NavLink>}
-                        {ready && user && isModerator && <NavLink to="/moderator">Moderator</NavLink>}
+                    <button type="button" className="action-button" onClick={onOpenSubmit}>
+                        Submit Run
+                    </button>
 
-                        {ready && user && (
-                            <button type="button" className="link-button" onClick={handleLogout}>
-                                Logout
-                            </button>
-                        )}
+                    {ready && user && (
+                        <button type="button" className="login-btn" onClick={handleLogout}>Logout</button>
+                    )}
 
-                        {ready && !user && (
-                            <>
-                                <button type="button" className="link-button" onClick={() => onOpenAuth("register")}>
-                                    Register
-                                </button>
-                                <button type="button" className="link-button" onClick={() => onOpenAuth("login")}>
-                                    Login
-                                </button>
-                            </>
-                        )}
-                    </nav>
-                </div>
+                    {ready && !user && (
+                        <>
+                            <button type="button" className="login-btn" onClick={() => onOpenAuth("register")}>Register</button>
+                            <button type="button" className="login-btn" onClick={() => onOpenAuth("login")}>Login</button>
+                        </>
+                    )}
+
+                    <button
+                        type="button"
+                        className="theme-btn"
+                        onClick={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+                    >
+                        {theme === "dark" ? "Light" : "Dark"}
+                    </button>
+                </nav>
             </header>
 
             {!hasSupabase && (
-                <section className="container setup-warning">
+                <section className="setup-warning">
                     <strong>Supabase setup required.</strong>
                     <p>
-                        Create <code>public/config.js</code> from <code>public/config.example.js</code> or use
-                        <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>.
+                        Configure <code>config.js</code> with <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code>.
                     </p>
                 </section>
             )}
 
             {error && (
-                <section className="container setup-warning error">
+                <section className="setup-warning error">
                     <strong>Auth warning:</strong> {error}
                 </section>
             )}
 
-            <main className="container page-wrap">
+            <main>
                 <Outlet />
             </main>
 
-            <footer className="site-footer">
-                <div className="container">
-                    <p>SM64 Hack Roms Speedrun Mobile</p>
-                    <p>
-                        Powered by <a href="https://supabase.com" target="_blank" rel="noreferrer">Supabase</a>
-                        {" "}and data synced with <a href="https://speedrun.com" target="_blank" rel="noreferrer">speedrun.com</a>
-                    </p>
-                    {!ready && <p>Loading session...</p>}
-                    {ready && user && <p>Signed in as {profile?.username || user.displayName}</p>}
-                </div>
+            <footer>
+                <p>SM64 Mobile Records</p>
+                <p>
+                    Powered by <a href="https://supabase.com" target="_blank" rel="noreferrer">Supabase</a>
+                    {" "}and data synced by moderators.
+                </p>
+                {!ready && <p>Loading session...</p>}
+                {ready && user && <p>Signed in as {profile?.username || user.displayName}</p>}
             </footer>
         </div>
     );
 }
 
 function RoutedApp() {
+    const { user, isModerator } = useAuth();
+    const { showToast } = useToast();
+
     const [authMode, setAuthMode] = useState(null);
+    const [submitOpen, setSubmitOpen] = useState(false);
+    const [submittingRun, setSubmittingRun] = useState(false);
+
+    const submitRun = async (form) => {
+        if (!hasSupabase || !supabase) {
+            throw new Error("Supabase is not configured.");
+        }
+
+        setSubmittingRun(true);
+
+        try {
+            const setup = await loadMobileSetup();
+            if (!setup.hack || !setup.category) {
+                throw new Error("Site setup missing. Ask moderator to initialize Mod Queue first.");
+            }
+
+            const payload = buildRunPayload({
+                setup,
+                playerName: form.playerName,
+                courseId: form.courseId,
+                starIndex: form.starIndex,
+                igt: form.igt,
+                rta: form.rta,
+                dateAchieved: form.dateAchieved,
+                videoUrl: form.videoUrl,
+                userId: user?.id || "anonymous",
+                approveNow: isModerator
+            });
+
+            const insertRes = await supabase
+                .from("runs")
+                .insert(payload);
+
+            if (insertRes.error) {
+                throw insertRes.error;
+            }
+
+            if (isModerator) {
+                showToast("Run added as approved.", "success");
+            } else {
+                showToast("Run submitted for moderation.", "success");
+            }
+        } finally {
+            setSubmittingRun(false);
+        }
+    };
 
     return (
         <>
             <Routes>
-                <Route element={<AppShell onOpenAuth={setAuthMode} />}>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/hack/:slug" element={<HackPage onOpenAuth={() => setAuthMode("login")} />} />
-                    <Route path="/profile" element={<ProfilePage />} />
+                <Route element={<AppShell onOpenAuth={setAuthMode} onOpenSubmit={() => setSubmitOpen(true)} />}>
+                    <Route path="/" element={<CoursesPage />} />
+                    <Route path="/timeline" element={<TimelinePage />} />
+                    <Route path="/star/:courseId/:starIndex" element={<StarPage />} />
                     <Route path="/moderator" element={<ModeratorPage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
             </Routes>
 
             <AuthModal mode={authMode} open={Boolean(authMode)} onClose={() => setAuthMode(null)} />
+
+            <SubmitRunModal
+                open={submitOpen}
+                onClose={() => setSubmitOpen(false)}
+                onSubmit={submitRun}
+                submitting={submittingRun}
+            />
         </>
     );
 }

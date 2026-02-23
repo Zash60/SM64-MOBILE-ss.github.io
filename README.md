@@ -1,15 +1,15 @@
-# SM64 Hack Roms Speedrun Mobile
+# SM64 Mobile Records
 
-React + Vite leaderboard app for SM64 hack speedruns, using Supabase for auth and data.
+React + Vite site for SM64 Mobile records, using Supabase for auth and storage.
 
 ## Features
 
-- Home dashboard with hack catalog and recent activity
-- Hack detail page with leaderboard filters
+- Courses table with WR per star
+- Timeline of verified runs
+- Star detail page with history and video
 - Run submission modal
-- User profile with PB and WR stats
-- Moderator panel for run review and hack creation
-- Supabase auth (register, login, logout)
+- Moderator queue for approve/reject/edit/delete
+- One-click moderator setup for courses and stars in Supabase
 
 ## Stack
 
@@ -20,29 +20,13 @@ React + Vite leaderboard app for SM64 hack speedruns, using Supabase for auth an
 
 ## Setup
 
-1. Prepare Supabase backend (schema, auth, RLS policies).
-2. Run SQL files in `supabase/schema.sql` and `supabase/rls.sql`.
-3. Configure Supabase credentials:
-   - Option A (runtime config): edit `public/config.js` (or copy `public/config.example.js`)
-   - Option B: use `.env` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-   - Optional: set moderator fallback with `window.MODERATOR_USER_ID` or `VITE_MODERATOR_USER_ID`
-4. Install dependencies:
-   - `npm install`
-5. Start development:
-   - `npm run dev`
-6. Build production bundle:
-   - `npm run build`
+1. Apply `supabase/schema.sql` and `supabase/rls.sql`.
+2. Configure Supabase credentials in `public/config.js`.
+3. Install dependencies: `npm install`.
+4. Run local dev: `npm run dev`.
+5. Build: `npm run build`.
 
-## Deploy
+## Notes
 
-- A workflow at `.github/workflows/deploy-pages.yml` builds and deploys `dist` to GitHub Pages on every push to `main`.
-- In repository settings, set Pages source to **GitHub Actions** if it is not already enabled.
-
-## Project Structure
-
-- `src/App.jsx`: app shell and route wiring
-- `src/pages/`: Home, Hack, Profile, Moderator pages
-- `src/components/`: modal and shared UI components
-- `src/context/`: auth and toast providers
-- `src/lib/`: Supabase client and utility mappers
-- `supabase/`: SQL schema and policies
+- Go to **Mod Queue** and click **Initialize Site** once to create the hack/category/levels/stars structure.
+- GitHub Pages deploy is configured in `.github/workflows/deploy-pages.yml`.
