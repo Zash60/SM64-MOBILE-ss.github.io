@@ -1,0 +1,22 @@
+{
+  "name": "sm64-hack-roms-speedrun-mobile.github.io-main",
+  "version": "1.0.0",
+  "description": "Static leaderboard website for SM64 hack speedruns.",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.97.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.4",
+    "vite": "^7.3.1"
+  }
+}

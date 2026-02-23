@@ -1,117 +1,16 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SM64 Mobile Records</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SM64 Hack Roms Speedrun Mobile</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
 </head>
 <body>
-    <header>
-        <h1>SM64 Mobile - Records</h1>
-        <nav>
-            <a onclick="switchView('courses')" class="nav-link active">Courses</a>
-            <a onclick="switchView('timeline')" class="nav-link">Timeline</a>
-            <a onclick="switchView('mod')" class="nav-link" id="mod-link" style="display:none;">Mod Queue</a>
-            <span style="color: #555">|</span>
-            <a class="action-button" onclick="openSubmissionModal()">Submit Run</a>
-            <a class="login-btn" onclick="openLoginModal()" id="login-btn-text">Mod Login</a>
-        </nav>
-    </header>
-
-    <main>
-        <!-- TELA 1: LISTA DE FASES (Home) -->
-        <div id="view-courses">
-            <div id="courses-container"></div>
-        </div>
-
-        <!-- TELA 2: TIMELINE -->
-        <div id="view-timeline" style="display: none;">
-            <div class="timeline-header">Recent Activity (Verified Runs)</div>
-            <div id="timeline-feed"></div>
-        </div>
-
-        <!-- TELA 3: DETALHES DA ESTRELA -->
-        <div id="view-star-detail" style="display: none;">
-            <button onclick="switchView('courses')" class="back-btn">← Back to Courses</button>
-            <div id="star-detail-content"></div>
-        </div>
-
-        <!-- TELA 4: MOD DASHBOARD -->
-        <div id="view-mod" style="display: none;">
-            <div class="course-section">
-                <div class="course-header bg-secret">Pending Verification</div>
-                <div id="mod-queue-list" style="padding: 20px;">Loading...</div>
-            </div>
-        </div>
-    </main>
-
-    <!-- MODAL: SUBMISSION -->
-    <div id="submission-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModal('submission-modal')">&times;</span>
-            <h2>Submit New Run</h2>
-            <form id="submission-form" onsubmit="handleRunSubmission(event)">
-                <select id="course-select" required><option value="">Select Course</option></select>
-                <select id="star-select" required disabled><option value="">Select Star</option></select>
-                <input type="text" id="runner" required placeholder="Player Name">
-                <div class="form-row">
-                    <input type="text" id="igt" required placeholder="IGT (e.g. 1:18.23)">
-                    <input type="text" id="rta" placeholder="Real Time (Optional)">
-                </div>
-                <input type="date" id="date" required>
-                <input type="url" id="videoLink" required placeholder="Video Link (YouTube)">
-                <button type="submit" id="submit-run-button">Submit Run</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL: EDIT RUN (NOVO) -->
-    <div id="edit-run-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModal('edit-run-modal')">&times;</span>
-            <h2>Edit Run</h2>
-            <form id="edit-run-form" onsubmit="handleEditSubmission(event)">
-                <input type="hidden" id="edit-id">
-                <label>Player:</label>
-                <input type="text" id="edit-runner" required>
-                <div class="form-row">
-                    <div><label>IGT:</label><input type="text" id="edit-igt" required></div>
-                    <div><label>RT:</label><input type="text" id="edit-rta"></div>
-                </div>
-                <label>Date:</label>
-                <input type="date" id="edit-date" required>
-                <label>Video Link:</label>
-                <input type="url" id="edit-videoLink" required>
-                <button type="submit" style="background-color: #f39c12;">Update Run</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL: LOGIN -->
-    <div id="login-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModal('login-modal')">&times;</span>
-            <h2>Moderator Access</h2>
-            <form onsubmit="handleLogin(event)">
-                <input type="email" id="email" required placeholder="Email">
-                <input type="password" id="password" required placeholder="Password">
-                <button type="submit">Log In</button>
-            </form>
-        </div>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-        import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-        import { firebaseConfig } from './firebase-config.js';
-        
-        const app = initializeApp(firebaseConfig);
-        window.db = getFirestore(app);
-        window.auth = getAuth(app);
-    </script>
-    <script src="script.js" type="module"></script>
+    <div id="root"></div>
+    <script src="./config.js"></script>
+    <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
