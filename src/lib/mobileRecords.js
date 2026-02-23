@@ -16,6 +16,11 @@ export function getRunRta(run) {
     return raw || "-";
 }
 
+export function getRunVersion(run) {
+    const raw = String(run?.variables?.version || "").trim();
+    return raw || "";
+}
+
 export function getRunCourseId(run) {
     return String(run?.variables?.courseId || "").trim();
 }
@@ -40,6 +45,34 @@ export function getRunDateTimestamp(run) {
     return Number.isNaN(timestamp) ? 0 : timestamp;
 }
 
+function getComparableRunId(run) {
+    return String(run?.id || "");
+}
+
+function isEarlierRun(left, right) {
+    const leftTimestamp = getRunDateTimestamp(left);
+    const rightTimestamp = getRunDateTimestamp(right);
+
+    if (leftTimestamp !== rightTimestamp) {
+        return leftTimestamp < rightTimestamp;
+    }
+
+    return getComparableRunId(left) < getComparableRunId(right);
+}
+
+function formatDateWithLeadingZero(source) {
+    const date = new Date(source);
+    if (Number.isNaN(date.getTime())) return "-";
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+}
+
+export function formatRunDateLabel(run) {
+    return formatDateWithLeadingZero(run?.dateAchieved || run?.submittedAt || "");
+}
+
 export function matchesStar(run, courseId, starIndex) {
     return getRunCourseId(run) === courseId && getRunStarIndex(run) === Number(starIndex);
 }
@@ -50,11 +83,56 @@ export function normalizeRta(value) {
 }
 
 export function parseIgtToMs(igtInput) {
-    const ms = parseTimeToMilliseconds(String(igtInput || "").trim());
+    let input = String(igtInput || "").trim();
+    if (!input) {
+        throw new Error("Invalid IGT format.");
+    }
+
+    input = input
+        .replace(/[’′]/g, "'")
+        .replace(/[”″]/g, "\"")
+        .replace(/\s+/g, "");
+
+    if (input.includes("'") || input.includes("\"")) {
+        input = input.replace(/'/g, ":").replace(/"/g, ".").replace(/:\./g, ".");
+    }
+
+    const ms = parseTimeToMilliseconds(input);
     if (Number.isNaN(ms) || ms < 0) {
         throw new Error("Invalid IGT format.");
     }
     return ms;
+}
+
+function parseFreeTimeToMs(rawValue) {
+    const raw = String(rawValue || "").trim();
+    if (!raw || raw === "-") return Number.NaN;
+    return parseIgtToMs(raw);
+}
+
+function formatDiff(oldTimeMs, newTimeMs) {
+    const diffMs = Math.abs(oldTimeMs - newTimeMs);
+    if (Number.isNaN(diffMs)) return "00\"00";
+
+    const totalCentiseconds = Math.round(diffMs / 10);
+    const secondsTotal = Math.floor(totalCentiseconds / 100);
+    const centiseconds = totalCentiseconds % 100;
+
+    if (secondsTotal >= 60) {
+        const minutes = Math.floor(secondsTotal / 60);
+        const seconds = secondsTotal % 60;
+        return `${minutes}'${String(seconds).padStart(2, "0")}"${String(centiseconds).padStart(2, "0")}`;
+    }
+
+    return `${String(secondsTotal).padStart(2, "0")}"${String(centiseconds).padStart(2, "0")}`;
+}
+
+function daysBetweenRuns(leftRun, rightRun) {
+    const left = new Date(leftRun?.dateAchieved || leftRun?.submittedAt || "").getTime();
+    const right = new Date(rightRun?.dateAchieved || rightRun?.submittedAt || "").getTime();
+
+    if (Number.isNaN(left) || Number.isNaN(right)) return 0;
+    return Math.ceil(Math.abs(left - right) / 86400000);
 }
 
 export function getVideoEmbedUrl(videoUrl) {
@@ -82,7 +160,7 @@ export function getTimelineTag(currentRun, allRuns) {
     const previousRuns = allRuns.filter((candidate) => {
         if (candidate.id === currentRun.id) return false;
         if (!matchesStar(candidate, courseId, starIndex)) return false;
-        return getRunDateTimestamp(candidate) < getRunDateTimestamp(currentRun);
+        return isEarlierRun(candidate, currentRun);
     });
 
     if (previousRuns.length === 0) {
@@ -93,10 +171,10 @@ export function getTimelineTag(currentRun, allRuns) {
     const bestPreviousIGT = previousRuns[0];
     const bestCurrent = currentRun.timeInMs < bestPreviousIGT.timeInMs;
 
-    const currentRtaMs = parseTimeToMilliseconds(normalizeRta(getRunRta(currentRun)));
+    const currentRtaMs = parseFreeTimeToMs(getRunRta(currentRun));
     const previousWithRta = previousRuns
         .filter((run) => getRunRta(run) !== "-")
-        .map((run) => ({ ...run, rtaMs: parseTimeToMilliseconds(getRunRta(run)) }))
+        .map((run) => ({ ...run, rtaMs: parseFreeTimeToMs(getRunRta(run)) }))
         .filter((run) => !Number.isNaN(run.rtaMs))
         .sort((left, right) => left.rtaMs - right.rtaMs);
 
@@ -111,13 +189,84 @@ export function getTimelineTag(currentRun, allRuns) {
         }
     }
 
-    if (bestCurrent && bestRta) return "[RT/IGT]";
+    if (bestCurrent && bestRta) return "[RT / IGT]";
     if (bestRta) return "[RT]";
     if (bestCurrent) return "[IGT]";
     return "[Run]";
 }
 
-export function buildRunPayload({ setup, playerName, courseId, starIndex, igt, rta, dateAchieved, videoUrl, userId, approveNow = false }) {
+export function buildTimelineNarrative(currentRun, allRuns) {
+    const courseId = getRunCourseId(currentRun);
+    const starIndex = getRunStarIndex(currentRun);
+
+    const previousRuns = allRuns.filter((candidate) => {
+        if (candidate.id === currentRun.id) return false;
+        if (!matchesStar(candidate, courseId, starIndex)) return false;
+        return isEarlierRun(candidate, currentRun);
+    });
+
+    const version = getRunVersion(currentRun);
+    const versionSuffix = version ? ` on ${version}!` : "!";
+    const currentIgtText = getRunIgt(currentRun);
+    const currentIgtMs = currentRun.timeInMs;
+    const currentRtaText = getRunRta(currentRun);
+    const currentRtaMs = parseFreeTimeToMs(currentRtaText);
+
+    if (previousRuns.length === 0) {
+        return {
+            tag: "[New]",
+            main: `${currentRun.playerName} set the first record with ${currentIgtText} (RT: ${currentRtaText})${versionSuffix}`,
+            details: []
+        };
+    }
+
+    const sortedByIgt = [...previousRuns].sort((left, right) => left.timeInMs - right.timeInMs);
+    const prevBestIgt = sortedByIgt[0];
+    const beatIgt = currentIgtMs < prevBestIgt.timeInMs;
+    const igtDiff = beatIgt ? formatDiff(prevBestIgt.timeInMs, currentIgtMs) : "00\"00";
+
+    const previousWithRta = previousRuns
+        .map((run) => ({ run, rtaMs: parseFreeTimeToMs(getRunRta(run)) }))
+        .filter((item) => !Number.isNaN(item.rtaMs))
+        .sort((left, right) => left.rtaMs - right.rtaMs);
+
+    const prevBestRtaItem = previousWithRta[0] || null;
+    const beatRta = !Number.isNaN(currentRtaMs)
+        && (prevBestRtaItem ? currentRtaMs < prevBestRtaItem.rtaMs : true);
+    const rtDiff = beatRta && prevBestRtaItem
+        ? formatDiff(prevBestRtaItem.rtaMs, currentRtaMs)
+        : "00\"00";
+
+    let tag = "[Run]";
+    if (beatRta && beatIgt) tag = "[RT / IGT]";
+    else if (beatRta) tag = "[RT]";
+    else if (beatIgt) tag = "[IGT]";
+
+    let main = `${currentRun.playerName} completed this star in ${currentIgtText} (RT: ${currentRtaText})${versionSuffix}`;
+    if (beatRta && beatIgt) {
+        main = `${currentRun.playerName} beat the real time record and the best IGT with a ${currentRtaText} (-${rtDiff}) and ${currentIgtText} (-${igtDiff})${versionSuffix}`;
+    } else if (beatRta) {
+        main = `${currentRun.playerName} beat the real time record with a ${currentRtaText} (-${rtDiff})${versionSuffix}`;
+    } else if (beatIgt) {
+        main = `${currentRun.playerName} beat the best IGT with a ${currentIgtText} (-${igtDiff})${versionSuffix}`;
+    }
+
+    const details = [];
+    if (beatRta && prevBestRtaItem) {
+        details.push(
+            `The previous real time record was ${getRunRta(prevBestRtaItem.run)} by ${prevBestRtaItem.run.playerName}. (Achieved: ${daysBetweenRuns(currentRun, prevBestRtaItem.run)} days ago)`
+        );
+    }
+    if (beatIgt) {
+        details.push(
+            `The previous best IGT was ${getRunIgt(prevBestIgt)} by ${prevBestIgt.playerName}. (Achieved: ${daysBetweenRuns(currentRun, prevBestIgt)} days ago)`
+        );
+    }
+
+    return { tag, main, details };
+}
+
+export function buildRunPayload({ setup, playerName, courseId, starIndex, igt, rta, version, dateAchieved, videoUrl, userId, approveNow = false }) {
     if (!setup?.hack?.id || !setup?.category?.id) {
         throw new Error("Site setup not found. Ask a moderator to initialize this site.");
     }
@@ -144,6 +293,7 @@ export function buildRunPayload({ setup, playerName, courseId, starIndex, igt, r
 
     const timeInMs = parseIgtToMs(cleanIgt);
     const cleanRta = normalizeRta(rta);
+    const cleanVersion = String(version || "").trim();
     const cleanVideo = String(videoUrl || "").trim();
     const cleanDate = String(dateAchieved || "").trim();
 
@@ -165,7 +315,8 @@ export function buildRunPayload({ setup, playerName, courseId, starIndex, igt, r
             starIndex: Number(starIndex),
             starName,
             igt: cleanIgt,
-            rta: cleanRta
+            rta: cleanRta,
+            version: cleanVersion
         }
     };
 }

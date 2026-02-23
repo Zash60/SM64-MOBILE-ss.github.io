@@ -352,6 +352,18 @@ footer {
     font-size: 1rem;
 }
 
+.timeline-main {
+    color: #e8e8e8;
+    line-height: 1.4;
+    margin-top: 0.2rem;
+}
+
+.timeline-sub {
+    color: #bfc7d4;
+    line-height: 1.35;
+    margin-top: 0.25rem;
+}
+
 .timeline-actions {
     margin-top: 0.45rem;
 }

@@ -133,6 +133,7 @@ function RoutedApp() {
                 starIndex: form.starIndex,
                 igt: form.igt,
                 rta: form.rta,
+                version: form.version,
                 dateAchieved: form.dateAchieved,
                 videoUrl: form.videoUrl,
                 userId: user?.id || "anonymous",

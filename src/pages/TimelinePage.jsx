@@ -3,16 +3,16 @@ import { useEffect, useMemo, useState } from "react";
 import { getCourseById } from "../data/courses";
 import {
     MOBILE_HACK_SLUG,
+    buildTimelineNarrative,
+    formatRunDateLabel,
     getRunCourseId,
     getRunDateTimestamp,
-    getRunIgt,
     getRunStarName,
-    getTimelineTag,
     getVideoEmbedUrl,
     loadMobileSetup
 } from "../lib/mobileRecords";
 import { hasSupabase, supabase } from "../lib/supabase";
-import { formatDate, mapRunRow, unwrap } from "../lib/utils";
+import { mapRunRow, unwrap } from "../lib/utils";
 
 export default function TimelinePage() {
     const [loading, setLoading] = useState(true);
@@ -61,7 +61,11 @@ export default function TimelinePage() {
 
     const recentRuns = useMemo(
         () => [...runs]
-            .sort((left, right) => getRunDateTimestamp(right) - getRunDateTimestamp(left))
+            .sort((left, right) => {
+                const byTime = getRunDateTimestamp(right) - getRunDateTimestamp(left);
+                if (byTime !== 0) return byTime;
+                return String(right.id).localeCompare(String(left.id));
+            })
             .slice(0, 80),
         [runs]
     );
@@ -88,7 +92,7 @@ export default function TimelinePage() {
             {!loading && setupReady && recentRuns.map((run) => {
                 const course = getCourseById(getRunCourseId(run));
                 const starName = getRunStarName(run) || "Unknown Star";
-                const tag = getTimelineTag(run, runs);
+                const timeline = buildTimelineNarrative(run, runs);
                 const embedUrl = getVideoEmbedUrl(run.videoUrl);
                 const isOpen = openVideoRunId === run.id;
 
@@ -98,13 +102,16 @@ export default function TimelinePage() {
 
                         <div className="timeline-content">
                             <div className="timeline-head-row">
-                                <h4>{tag} {course?.code || "SM64"} - {starName}</h4>
-                                <span>{formatDate(run.dateAchieved)}</span>
+                                <h4>{timeline.tag} {course?.code || "SM64"} - {starName}</h4>
+                                <span>{formatRunDateLabel(run)}</span>
                             </div>
 
-                            <p>
-                                <strong>{run.playerName}</strong> set <strong>{getRunIgt(run)}</strong>
-                            </p>
+                            <p className="timeline-main">{timeline.main}</p>
+                            {timeline.details.map((line) => (
+                                <p key={`${run.id}-${line}`} className="timeline-sub">
+                                    {line}
+                                </p>
+                            ))}
 
                             <div className="timeline-actions">
                                 {run.videoUrl && embedUrl && (
