@@ -9,7 +9,6 @@ const INITIAL_FORM = {
     playerName: "",
     igt: "",
     rta: "",
-    version: "1.0",
     dateAchieved: "",
     videoUrl: ""
 };
@@ -131,17 +130,6 @@ export default function SubmitRunModal({ open, onClose, onSubmit, submitting = f
                         />
                     </label>
                 </div>
-
-                <label>
-                    Version
-                    <input
-                        type="text"
-                        value={form.version}
-                        onChange={(event) => setForm((prev) => ({ ...prev, version: event.target.value }))}
-                        placeholder="1.0"
-                        required
-                    />
-                </label>
 
                 <label>
                     Date

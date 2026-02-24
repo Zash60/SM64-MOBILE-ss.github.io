@@ -168,7 +168,6 @@ export default function ModeratorPage() {
             starIndex: form.starIndex,
             igt: form.igt,
             rta: form.rta,
-            version: form.version,
             dateAchieved: form.dateAchieved,
             videoUrl: form.videoUrl,
             userId: run.userId,

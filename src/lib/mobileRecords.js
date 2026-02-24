@@ -16,11 +16,6 @@ export function getRunRta(run) {
     return raw || "-";
 }
 
-export function getRunVersion(run) {
-    const raw = String(run?.variables?.version || "").trim();
-    return raw || "";
-}
-
 export function getRunCourseId(run) {
     return String(run?.variables?.courseId || "").trim();
 }
@@ -205,8 +200,6 @@ export function buildTimelineNarrative(currentRun, allRuns) {
         return isEarlierRun(candidate, currentRun);
     });
 
-    const version = getRunVersion(currentRun);
-    const versionSuffix = version ? ` on ${version}!` : "!";
     const currentIgtText = getRunIgt(currentRun);
     const currentIgtMs = currentRun.timeInMs;
     const currentRtaText = getRunRta(currentRun);
@@ -215,7 +208,7 @@ export function buildTimelineNarrative(currentRun, allRuns) {
     if (previousRuns.length === 0) {
         return {
             tag: "[New]",
-            main: `${currentRun.playerName} set the first record with ${currentIgtText} (RT: ${currentRtaText})${versionSuffix}`,
+            main: `${currentRun.playerName} set the first record with ${currentIgtText} (RT: ${currentRtaText})!`,
             details: []
         };
     }
@@ -242,13 +235,13 @@ export function buildTimelineNarrative(currentRun, allRuns) {
     else if (beatRta) tag = "[RT]";
     else if (beatIgt) tag = "[IGT]";
 
-    let main = `${currentRun.playerName} completed this star in ${currentIgtText} (RT: ${currentRtaText})${versionSuffix}`;
+    let main = `${currentRun.playerName} completed this star in ${currentIgtText} (RT: ${currentRtaText}).`;
     if (beatRta && beatIgt) {
-        main = `${currentRun.playerName} beat the real time record and the best IGT with a ${currentRtaText} (-${rtDiff}) and ${currentIgtText} (-${igtDiff})${versionSuffix}`;
+        main = `${currentRun.playerName} beat the real time record and the best IGT with a ${currentRtaText} (-${rtDiff}) and ${currentIgtText} (-${igtDiff})!`;
     } else if (beatRta) {
-        main = `${currentRun.playerName} beat the real time record with a ${currentRtaText} (-${rtDiff})${versionSuffix}`;
+        main = `${currentRun.playerName} beat the real time record with a ${currentRtaText} (-${rtDiff})!`;
     } else if (beatIgt) {
-        main = `${currentRun.playerName} beat the best IGT with a ${currentIgtText} (-${igtDiff})${versionSuffix}`;
+        main = `${currentRun.playerName} beat the best IGT with a ${currentIgtText} (-${igtDiff})!`;
     }
 
     const details = [];
@@ -266,7 +259,7 @@ export function buildTimelineNarrative(currentRun, allRuns) {
     return { tag, main, details };
 }
 
-export function buildRunPayload({ setup, playerName, courseId, starIndex, igt, rta, version, dateAchieved, videoUrl, userId, approveNow = false }) {
+export function buildRunPayload({ setup, playerName, courseId, starIndex, igt, rta, dateAchieved, videoUrl, userId, approveNow = false }) {
     if (!setup?.hack?.id || !setup?.category?.id) {
         throw new Error("Site setup not found. Ask a moderator to initialize this site.");
     }
@@ -293,7 +286,6 @@ export function buildRunPayload({ setup, playerName, courseId, starIndex, igt, r
 
     const timeInMs = parseIgtToMs(cleanIgt);
     const cleanRta = normalizeRta(rta);
-    const cleanVersion = String(version || "").trim();
     const cleanVideo = String(videoUrl || "").trim();
     const cleanDate = String(dateAchieved || "").trim();
 
@@ -315,8 +307,7 @@ export function buildRunPayload({ setup, playerName, courseId, starIndex, igt, r
             starIndex: Number(starIndex),
             starName,
             igt: cleanIgt,
-            rta: cleanRta,
-            version: cleanVersion
+            rta: cleanRta
         }
     };
 }

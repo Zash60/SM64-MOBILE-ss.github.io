@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { COURSES } from "../data/courses";
-import { getRunCourseId, getRunIgt, getRunRta, getRunStarIndex, getRunVersion } from "../lib/mobileRecords";
+import { getRunCourseId, getRunIgt, getRunRta, getRunStarIndex } from "../lib/mobileRecords";
 import Modal from "./Modal";
 
 const EMPTY_FORM = {
@@ -10,7 +10,6 @@ const EMPTY_FORM = {
     playerName: "",
     igt: "",
     rta: "",
-    version: "1.0",
     dateAchieved: "",
     videoUrl: ""
 };
@@ -34,7 +33,6 @@ export default function EditRunModal({ open, onClose, run, onSubmit, saving = fa
             playerName: run.playerName || "",
             igt: getRunIgt(run) || "",
             rta: getRunRta(run) === "-" ? "" : getRunRta(run),
-            version: getRunVersion(run) || "1.0",
             dateAchieved: run.dateAchieved || "",
             videoUrl: run.videoUrl || ""
         });
@@ -119,16 +117,6 @@ export default function EditRunModal({ open, onClose, run, onSubmit, saving = fa
                         />
                     </label>
                 </div>
-
-                <label>
-                    Version
-                    <input
-                        type="text"
-                        value={form.version}
-                        onChange={(event) => setForm((prev) => ({ ...prev, version: event.target.value }))}
-                        required
-                    />
-                </label>
 
                 <label>
                     Date
